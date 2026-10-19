@@ -1,0 +1,288 @@
+# Маршрут k8s-лаба — единственный источник плана и статусов.
+# Страница https://tsim0710.github.io/k8s-lab-journal/ собирается из этого файла.
+# status: done | now | todo. Сделанному шагу — done: <дата> и journal: <дата записи>.
+# today — что на сегодня; steps — id шагов из blocks.
+
+trial_end: '2026-12-27'
+today:
+  date: '2026-10-19'
+  focus: 'Закрыть блок 1 наполовину: восстановление etcd из снимка, потом подготовка к апгрейду'
+  steps:
+  - 1-3
+  - 1-4
+  note: >-
+    Утро: etcd изнутри и шифрование — сделано. Дальше: снимок и восстановление (3–4 ч). Если хватит фокуса
+    — kubeadm upgrade plan и release notes 1.37, сам апгрейд можно завтра. В конце — конспект, push, lab-down.
+blocks:
+- id: b1
+  title: Опасная эксплуатация кластера
+  days: 2–3 дня
+  target: до 22.10
+  why: >-
+    То, что на проде делать страшно: восстановить кластер из бэкапа и обновить его без простоя. Сначала
+    — пока на кластере мало навешано, и снимок etcd страхует всё, что сломаем дальше.
+  done_when: >-
+    Восстановление из снимка отрепетировано, кластер на 1.37, ежедневная работа — под своим kubeconfig
+    без cluster-admin.
+  steps:
+  - id: 1-1
+    title: 'etcd изнутри: флаги, доступ, MVCC, watch, файлы'
+    hours: 4
+    status: done
+    done: '2026-10-19'
+    journal: '2026-10-19'
+    note: docs/01-cluster.md
+  - id: 1-2
+    title: Шифрование секретов в etcd и ротация ключа
+    hours: 4
+    status: done
+    done: '2026-10-19'
+    journal: '2026-10-19'
+    note: docs/13-security.md; заодно инцидент с argocd-secret
+  - id: 1-3
+    title: Снимок etcd и восстановление вместе с ключом
+    hours: 4
+    status: now
+    note: >-
+      снимок → удалить ns demo → restore в новый каталог; без ключа секреты нечитаемы; проверить, что
+      открытый пароль ушёл из WAL; make etcd-backup
+  - id: 1-4
+    title: kubeadm upgrade 1.36 → 1.37
+    hours: 5
+    status: todo
+    note: >-
+      upgrade plan, release notes, cp, воркеры по одному с drain; после — шифрование и метрики на месте
+  - id: 1-5
+    title: drain, PDB и отказ ноды
+    hours: 3
+    status: todo
+    note: погасить w2 и засечь, когда поды уедут; что с StatefulSet и PVC на local-path
+  - id: 1-6
+    title: 'RBAC: свой пользователь вместо admin.conf'
+    hours: 2
+    status: todo
+    note: edit на нужные ns, --as для проверки, ServiceAccount с минимумом прав
+- id: b2
+  title: Алерты и дежурство
+  days: 3–4 дня
+  target: до 28.10
+  why: >-
+    До своего сервиса и баз: тогда каждый следующий эксперимент — кривой релиз, падение primary — видишь
+    по алерту, как на работе, а не через kubectl.
+  done_when: >-
+    В Telegram приходят только полезные алерты, у каждого есть runbook, отработано 5 устроенных поломок
+    с разбором.
+  steps:
+  - id: 2-1
+    title: 'Ревизия: что стреляет сейчас и что из этого шум'
+    hours: 2
+    status: todo
+    note: >-
+      ~150 правил kube-prometheus-stack, Watchdog, InfoInhibitor; список «оставить / заглушить / переписать»
+  - id: 2-2
+    title: Alertmanager → Telegram
+    hours: 3
+    status: todo
+    note: бот, маршруты по severity, группировка, inhibit, повтор; секрет бота — через secrets/
+  - id: 2-3
+    title: 'Свои алерты: ноды, диск, сертификаты, etcd, бэкапы'
+    hours: 3
+    status: todo
+    note: 'алерты на симптомы, а не «CPU 80%»; etcd: has_leader, fsync p99, размер базы к квоте'
+  - id: 2-4
+    title: Runbooks в docs/runbooks и runbook_url в алертах
+    hours: 2
+    status: todo
+    note: что проверить, как починить, когда эскалировать
+  - id: 2-5
+    title: 'Дни поломок: 5 сценариев'
+    hours: 6
+    status: todo
+    note: >-
+      забить диск, уронить ноду, CrashLoop, протухающий сертификат, сломанный бэкап; замер: пришло ли,
+      через сколько, понятно ли
+  - id: 2-6
+    title: Дашборд «обзор лаба» в Grafana кодом
+    hours: 3
+    status: todo
+    note: дашборд в gitops, а не руками в интерфейсе
+  - id: 2-7
+    title: 'Решение по памяти: убрать OTel Demo или третий воркер'
+    hours: 1
+    status: todo
+    note: на воркерах 70–80% по requests; CNPG и свой сервис не влезут
+- id: b3
+  title: Свой сервис и CI/CD
+  days: 4–5 дней
+  target: до 5.11
+  why: >-
+    podinfo ничего не хранит и CI не требует. Свой сервис с базой проходит всю цепочку: тесты, образ,
+    выкатка через ArgoCD, миграции, откат. Пересекается с переносом 52 сервисов на GHA на работе.
+  done_when: push в main доезжает до прода без рук; плохой релиз ловится алертом и откатывается.
+  steps:
+  - id: 3-1
+    title: 'Сервис на Go с Postgres: health, metrics, трейсы, логи'
+    hours: 6
+    status: todo
+    note: маленький API; /healthz, /readyz, /metrics, OTLP, структурные логи
+  - id: 3-2
+    title: 'CI на pull request: lint, тесты с Postgres, сборка, Trivy'
+    hours: 3
+    status: todo
+    note: GitHub Actions, Postgres как service container
+  - id: 3-3
+    title: 'CD: GHCR → тег в gitops → ArgoCD, stage и prod'
+    hours: 4
+    status: todo
+    note: образ по SHA, коммит тега в k8s-lab-gitops, промоут stage → prod
+  - id: 3-4
+    title: Миграции базы отдельным шагом
+    hours: 3
+    status: todo
+    note: Job / PreSync hook, обратимые миграции
+  - id: 3-5
+    title: Пробы, ресурсы, HPA, PDB на своём сервисе
+    hours: 3
+    status: todo
+    note: бывший пункт 7 маршрута — на живом сервисе
+  - id: 3-6
+    title: SLO и алерты по burn rate; плохой релиз → откат
+    hours: 4
+    status: todo
+    note: выкатить заведомо кривую версию и пройти весь путь до отката
+  - id: 3-7
+    title: 'Argo Rollouts: canary с анализом метрик'
+    hours: 4
+    status: todo
+    note: по желанию
+- id: b4
+  title: 'Базы: реплики, бэкапы, восстановление'
+  days: 4–5 дней
+  target: до 13.11
+  why: Самое ценное в кластере — данные. Реплика без проверенного восстановления — не бэкап.
+  done_when: >-
+    Убил primary — сервис пережил; восстановил базу на момент «за 5 минут до DROP TABLE»; бэкап проверяется
+    сам по расписанию.
+  steps:
+  - id: 4-1
+    title: 'CloudNativePG: кластер из 3 инстансов, как устроена репликация'
+    hours: 4
+    status: todo
+    note: оператор через ArgoCD, потоковая репликация, слоты
+  - id: 4-2
+    title: Переезд сервиса на CNPG с минимальным простоем
+    hours: 3
+    status: todo
+  - id: 4-3
+    title: WAL-архив и base backup в GCS
+    hours: 4
+    status: todo
+    note: бакет терраформом, доступ без ключей; стоимость — центы
+  - id: 4-4
+    title: 'PITR: DROP TABLE и восстановление на момент до'
+    hours: 3
+    status: todo
+  - id: 4-5
+    title: 'Failover и switchover: что видит сервис и алерты'
+    hours: 3
+    status: todo
+    note: убить primary руками; плановое переключение
+  - id: 4-6
+    title: PgBouncer, лимиты соединений, pg_stat_statements
+    hours: 3
+    status: todo
+    note: медленные запросы, дашборд
+  - id: 4-7
+    title: 'Автопроверка бэкапа: restore-тест по расписанию'
+    hours: 2
+    status: todo
+    note: алерт, если проверка не прошла
+  - id: 4-8
+    title: MongoDB replica set
+    hours: 4
+    status: todo
+    note: по желанию
+- id: b5
+  title: Безопасность
+  days: 2 дня
+  target: до 17.11
+  why: >-
+    Закрыть дыры из docs/13-security.md. Sealed Secrets заодно делают переезд воспроизводимым: пароли
+    тоже едут через git.
+  done_when: >-
+    Все секреты в git зашифрованы, прикладные namespace под Pod Security baseline, data закрыт NetworkPolicy.
+  steps:
+  - id: 5-1
+    title: 'Sealed Secrets: ручные секреты в git'
+    hours: 3
+    status: todo
+  - id: 5-2
+    title: 'Pod Security: warn → enforce по namespace'
+    hours: 3
+    status: todo
+    note: системным оставить privileged
+  - id: 5-3
+    title: 'NetworkPolicy: default-deny для data и своего сервиса'
+    hours: 3
+    status: todo
+  - id: 5-4
+    title: securityContext своих приложений
+    hours: 2
+    status: todo
+    note: не root, без capabilities, seccomp
+- id: b6
+  title: Генеральная репетиция переезда
+  days: 2 дня
+  target: до 20.11
+  why: >-
+    Доказать, что лаб воспроизводится кодом, а не держится на ручных правках. И решить судьбу лаба после
+    27.12 заранее.
+  done_when: >-
+    Новый кластер в новом проекте поднят без ручных правок, база восстановлена из бэкапа в GCS, решение
+    о жизни после триала принято.
+  steps:
+  - id: 6-1
+    title: Поднять всё с нуля кодом в новом проекте
+    hours: 6
+    status: todo
+    note: bootstrap, infra, stage2, ArgoCD; замер времени и список ручных шагов
+  - id: 6-2
+    title: Восстановить базу из бэкапа в новом кластере
+    hours: 3
+    status: todo
+  - id: 6-3
+    title: 'Решение: новый триал или платный аккаунт'
+    hours: 1
+    status: todo
+    note: крайний срок — 20.12
+- id: b7
+  title: Загашник
+  days: по желанию
+  target: после 20.11
+  why: Когда основное пройдено и до конца триала остаётся время.
+  done_when: —
+  steps:
+  - id: 7-1
+    title: Gateway API вместо ingress
+    status: todo
+  - id: 7-2
+    title: Cilium Hubble и L7 NetworkPolicy
+    status: todo
+  - id: 7-3
+    title: 'Chaos Mesh: поломки по расписанию'
+    status: todo
+  - id: 7-4
+    title: 'Kyverno: политики вместо договорённостей'
+    status: todo
+  - id: 7-5
+    title: Vault + External Secrets
+    status: todo
+  - id: 7-6
+    title: 'Velero: бэкап объектов и PVC'
+    status: todo
+  - id: 7-7
+    title: Kafka изнутри на OTel Demo
+    status: todo
+  - id: 7-8
+    title: Алерты по логам в Loki
+    status: todo

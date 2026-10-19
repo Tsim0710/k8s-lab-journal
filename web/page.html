@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>{{TITLE}}</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@600;700&display=swap">
+<style>
+/* Одна колонка-журнал: сверху «Сегодня», ниже блоки маршрута; записи — отдельные страницы */
+:root {
+  --bg: #f3f5f8; --surface: #ffffff; --ink: #18202c; --muted: #5a6575; --line: #d9dee6;
+  --accent: #2f5fd0; --code-bg: #eef1f5;
+  --done: #1f7a4d; --done-soft: #e2f2e9; --now: #a15c00; --now-soft: #fbefd9;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root {
+  --bg: #11151c; --surface: #181e27; --ink: #e5e9f0; --muted: #98a2b3; --line: #2a3340;
+  --accent: #7ea2ff; --code-bg: #0e1218;
+  --done: #5fcf94; --done-soft: #16301f; --now: #f0b45c; --now-soft: #33260f; color-scheme: dark } }
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.55; }
+a { color: var(--accent); }
+.wrap { max-width: 860px; margin: 0 auto; padding-block: 28px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  display: grid; gap: 30px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; letter-spacing: .01em; line-height: 1.2; }
+h1 { font-size: 30px; font-weight: 700; }
+h2 { font-size: 21px; font-weight: 700; }
+.mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.label { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.lead { margin: 0; max-width: 68ch; color: var(--muted); }
+
+.top { display: grid; gap: 12px; }
+.head-row { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: baseline; justify-content: space-between; }
+.stats { display: flex; flex-wrap: wrap; gap: 6px 22px; }
+.stats b { font-family: var(--font-mono); font-size: 17px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); }
+
+.today { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 6px; padding: 18px 20px; display: grid; gap: 12px; }
+.today .focus { font-size: 17px; font-weight: 600; }
+.today > .note { color: var(--muted); max-width: 70ch; }
+
+.journal-list { display: grid; gap: 8px; }
+.journal-list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.journal-list .date { color: var(--muted); font-size: 13px; margin-right: 8px; }
+
+.blocks { display: grid; gap: 36px; }
+.block { display: grid; gap: 10px; }
+.block-head { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; align-items: baseline; }
+.block-num { font-size: 13px; color: var(--muted); }
+.block-meta { font-size: 12.5px; color: var(--muted); white-space: nowrap; }
+.block-head .why, .block-head .done-when { grid-column: 2 / -1; max-width: 70ch; font-size: 14px; }
+.block-head .why { color: var(--muted); }
+
+ul.steps { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+li.step { display: grid; grid-template-columns: 18px 40px minmax(0, 1fr) auto; gap: 2px 10px; align-items: start; padding: 9px 6px; border-bottom: 1px solid var(--line); }
+li.step .mark { color: var(--done); font-weight: 600; }
+li.step.now .mark { color: var(--now); }
+li.step .num { font-family: var(--font-mono); font-size: 13px; color: var(--muted); padding-top: 1px; }
+li.step .title { min-width: 0; }
+li.step .note { color: var(--muted); font-size: 13.5px; }
+li.step .h { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); white-space: nowrap; padding-top: 1px; }
+li.step.done .t { color: var(--muted); }
+li.step.now { background: var(--now-soft); border-radius: 4px; }
+.pill { display: inline-block; font-family: var(--font-mono); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; padding: 1px 7px; border-radius: 10px; margin-left: 6px; vertical-align: 1px; }
+.pill.now { background: var(--now); color: var(--surface); }
+.pill.done { background: var(--done-soft); color: var(--done); }
+.jlink { font-size: 13px; margin-left: 6px; white-space: nowrap; }
+
+.back { font-size: 14px; }
+.entry { display: grid; gap: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 1px 9px; }
+.md { max-width: 72ch; display: grid; gap: 0; }
+.md h2 { margin: 26px 0 8px; }
+.md h3 { margin: 18px 0 6px; font-size: 17px; }
+.md p, .md ul, .md ol { margin: 0 0 12px; }
+.md li { margin: 3px 0; }
+.md code { font-family: var(--font-mono); font-size: 13px; background: var(--code-bg); padding: 1px 4px; border-radius: 3px; }
+.md pre { background: var(--code-bg); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; overflow-x: auto; margin: 0 0 14px; }
+.md pre code { background: none; padding: 0; font-size: 12.5px; }
+.md .table-wrap, .md table { max-width: 100%; }
+.md table { border-collapse: collapse; margin: 0 0 14px; font-size: 14px; display: block; overflow-x: auto; }
+.md th, .md td { border: 1px solid var(--line); padding: 5px 10px; text-align: left; vertical-align: top; }
+.md th { background: var(--surface); font-weight: 600; }
+
+footer { color: var(--muted); font-size: 13px; }
+@media (max-width: 540px) {
+  li.step { grid-template-columns: 16px 34px minmax(0, 1fr); }
+  li.step .h { grid-column: 3; padding-top: 0; }
+  .block-head { grid-template-columns: auto 1fr; }
+  .block-meta { grid-column: 2; }
+  h1 { font-size: 26px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+{{BODY}}
+</div>
+<script>
+// дни до конца триала считаются в браузере, а не на момент сборки
+(function () {
+  var el = document.getElementById("days"); if (!el) return;
+  var end = new Date(el.dataset.end + "T23:59:59+03:00");
+  el.textContent = Math.max(0, Math.ceil((end - new Date()) / 86400000)) + " дн.";
+})();
+</script>
+</body>
+</html>

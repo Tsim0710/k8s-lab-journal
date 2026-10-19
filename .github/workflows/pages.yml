@@ -1,0 +1,57 @@
+name: pages
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Публикация не должна наезжать сама на себя при частых пушах.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: install deps
+        run: pip install -r requirements.txt
+
+      # Битый roadmap.yaml или запись журнала со ссылкой на несуществующий шаг
+      # страницу не ломают: сборка падает раньше.
+      - name: validate
+        run: python build.py --validate
+
+      - name: build
+        run: python build.py
+
+      - uses: actions/upload-pages-artifact@v5
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: site
+
+  # https://tsim0710.github.io/k8s-lab-journal/
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v5
