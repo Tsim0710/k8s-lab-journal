@@ -43,7 +43,7 @@ def validate(rm: dict, journal: list[dict]) -> list[str]:
     errors = []
     ids = []
     for b in rm.get("blocks", []):
-        for key in ("id", "title", "days", "target", "why", "steps"):
+        for key in ("id", "num", "title", "days", "target", "why", "steps"):
             if key not in b:
                 errors.append(f"блок {b.get('id', '?')}: нет поля {key}")
         for s in b.get("steps", []):
@@ -150,7 +150,7 @@ def build_index(rm: dict, journal: list[dict]) -> str:
         out.append(f'<section class="journal-list" aria-labelledby="j-h"><h2 id="j-h">Журнал</h2><ul>{items}</ul></section>')
 
     out.append('<div class="blocks">')
-    for i, b in enumerate(rm["blocks"], 1):
+    for b in rm["blocks"]:
         bs = b["steps"]
         bd = sum(1 for s in bs if s["status"] == "done")
         bpct = round(bd / len(bs) * 100) if bs else 0
@@ -158,7 +158,7 @@ def build_index(rm: dict, journal: list[dict]) -> str:
         rows = "".join(step_row(s, "") for s in bs)
         out.append(f'''
 <section class="block" id="{esc(b["id"])}" aria-labelledby="h-{esc(b["id"])}">
-  <div class="block-head"><span class="block-num mono">{i:02d}</span>
+  <div class="block-head"><span class="block-num mono">{esc(b.get("num", ""))}</span>
     <h2 id="h-{esc(b["id"])}">{esc(b["title"])}</h2>
     <span class="block-meta mono">{bd}/{len(bs)} · {esc(b["days"])} · {esc(b["target"])}</span>
     <div class="why">{esc(b["why"])}</div>{done_when}</div>

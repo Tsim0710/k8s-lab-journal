@@ -5,25 +5,26 @@
 
 trial_end: '2026-12-27'
 today:
-  date: '2026-10-19'
-  focus: 'Закрыть блок 1 наполовину: восстановление etcd из снимка, потом подготовка к апгрейду'
+  date: '2026-10-22'
+  focus: 'Шаг 1-3: снимок etcd и восстановление вместе с ключом шифрования'
   steps:
   - 1-3
-  - 1-4
+  - 1-7
   note: >-
-    Утро: etcd изнутри и шифрование — сделано. Дальше: снимок и восстановление (3–4 ч). Если хватит фокуса
-    — kubeadm upgrade plan и release notes 1.37, сам апгрейд можно завтра. В конце — конспект, push, lab-down.
+    Подъём по чек-листу, снимок → удалить ns demo → restore → проверка без ключа. Потом подготовка к HA:
+    цифры по двум новым мастерам и схема VIP в GCP — до создания машин нужно «ок».
 blocks:
 - id: b1
+  num: '1'
   title: Опасная эксплуатация кластера
-  days: 2–3 дня
-  target: до 22.10
+  days: 4 дня
+  target: до 27.10
   why: >-
     То, что на проде делать страшно: восстановить кластер из бэкапа и обновить его без простоя. Сначала
     — пока на кластере мало навешано, и снимок etcd страхует всё, что сломаем дальше.
   done_when: >-
-    Восстановление из снимка отрепетировано, кластер на 1.37, ежедневная работа — под своим kubeconfig
-    без cluster-admin.
+    Восстановление из снимка отрепетировано, control plane из трёх мастеров переживает потерю любого,
+    кластер на 1.37, ежедневная работа — под своим kubeconfig без cluster-admin.
   steps:
   - id: 1-1
     title: 'etcd изнутри: флаги, доступ, MVCC, watch, файлы'
@@ -46,12 +47,23 @@ blocks:
     note: >-
       снимок → удалить ns demo → restore в новый каталог; без ключа секреты нечитаемы; проверить, что
       открытый пароль ушёл из WAL; make etcd-backup
+  - id: 1-7
+    title: 'HA control plane: 3 мастера за HAProxy + keepalived, VIP'
+    hours: 8
+    status: todo
+    note: >-
+      Уронить любой мастер — kubectl работает. Тяжелее заявленных 5 ч: controlPlaneEndpoint зашит адресом
+      k8s-cp (10.0.1.100) в сертификаты и kubeconfig всех нод — нужен VIP и перевыпуск; в GCP нет VRRP
+      multicast — keepalived в unicast, а VIP переезжает через alias IP или маршрут из notify-скрипта;
+      ключ шифрования etcd скопировать на новые мастера; etcd из 1 в 3 члена. +2 машины — цифры перед
+      созданием
   - id: 1-4
     title: kubeadm upgrade 1.36 → 1.37
     hours: 5
     status: todo
     note: >-
-      upgrade plan, release notes, cp, воркеры по одному с drain; после — шифрование и метрики на месте
+      upgrade plan, release notes; мастера по одному уже в HA, воркеры с drain; после — шифрование и метрики
+      на месте
   - id: 1-5
     title: drain, PDB и отказ ноды
     hours: 3
@@ -63,9 +75,10 @@ blocks:
     status: todo
     note: edit на нужные ns, --as для проверки, ServiceAccount с минимумом прав
 - id: b2
+  num: '2'
   title: Алерты и дежурство
-  days: 3–4 дня
-  target: до 28.10
+  days: 4 дня
+  target: до 31.10
   why: >-
     До своего сервиса и баз: тогда каждый следующий эксперимент — кривой релиз, падение primary — видишь
     по алерту, как на работе, а не через kubectl.
@@ -111,10 +124,23 @@ blocks:
     hours: 1
     status: todo
     note: на воркерах 70–80% по requests; CNPG и свой сервис не влезут
+  - id: 2-8
+    title: 'Пайплайн логов: Fluent Bit → Loki, JSON-логи, лейблы namespace/app'
+    hours: 3
+    status: todo
+    note: >-
+      сейчас логи собирает Alloy — решить: заменить на Fluent Bit или разобрать Alloy на том же уровне;
+      парсинг структурных логов
+  - id: 2-9
+    title: Алерты по логам в Loki
+    hours: 2
+    status: todo
+    note: всплеск ошибок, конкретные паттерны; ruler Loki → Alertmanager → Telegram
 - id: b3
+  num: '3'
   title: Свой сервис и CI/CD
-  days: 4–5 дней
-  target: до 5.11
+  days: 6 дней
+  target: до 7.11
   why: >-
     podinfo ничего не хранит и CI не требует. Свой сервис с базой проходит всю цепочку: тесты, образ,
     выкатка через ArgoCD, миграции, откат. Пересекается с переносом 52 сервисов на GHA на работе.
@@ -155,9 +181,23 @@ blocks:
     hours: 4
     status: todo
     note: по желанию
+  - id: 3-8
+    title: 'Трейсы в Tempo: медленный запрос, связка трейс ↔ логи ↔ метрики'
+    hours: 4
+    status: todo
+    note: OTLP из 3-1; exemplars в Prometheus, trace_id в логах, переходы в Grafana
+  - id: 3-9
+    title: 'Стратегия ветвления: trunk-based, защита веток, обязательные проверки, semver-теги'
+    hours: 1
+    status: todo
+  - id: 3-10
+    title: 'Кэш в CI: слои Docker (buildx cache), зависимости Go; замер до и после'
+    hours: 2
+    status: todo
 - id: b4
+  num: '4'
   title: 'Базы: реплики, бэкапы, восстановление'
-  days: 4–5 дней
+  days: 5 дней
   target: до 13.11
   why: Самое ценное в кластере — данные. Реплика без проверенного восстановления — не бэкап.
   done_when: >-
@@ -174,10 +214,12 @@ blocks:
     hours: 3
     status: todo
   - id: 4-3
-    title: WAL-архив и base backup в GCS
-    hours: 4
+    title: 'WAL-архив и base backup в GCS; бакет: версии, lifecycle, шифрование, аудит'
+    hours: 6
     status: todo
-    note: бакет терраформом, доступ без ключей; стоимость — центы
+    note: >-
+      бакет терраформом, доступ без ключей; версионирование, lifecycle на старые бэкапы, CMEK или Google-managed,
+      Data Access audit logs; стоимость — центы
   - id: 4-4
     title: 'PITR: DROP TABLE и восстановление на момент до'
     hours: 3
@@ -202,10 +244,44 @@ blocks:
     hours: 4
     status: todo
     note: по желанию
+- id: bq
+  num: Q
+  title: Очереди и кэш
+  days: 3 дня
+  target: до 17.11
+  why: >-
+    Почти любой продуктовый стек — это ещё кэш и брокер. Здесь их эксплуатация: память и вытеснение, отказ
+    master, рост очереди и автомасштабирование потребителей.
+  done_when: Убил Redis master и забил очередь — увидел по алертам и починил по runbook.
+  steps:
+  - id: Q-1
+    title: 'Redis как кэш сервиса: maxmemory, политика вытеснения, TTL, redis_exporter, алерты'
+    hours: 4
+    status: todo
+    note: allkeys-lru против volatile-lru; алерты на память и evictions
+  - id: Q-2
+    title: 'Redis: реплика + Sentinel (или оператор), убить master'
+    hours: 3
+    status: todo
+    note: что видит сервис, сколько длится переключение
+  - id: Q-3
+    title: 'RabbitMQ или Kafka: сервис публикует события, отдельный воркер читает'
+    hours: 5
+    status: todo
+  - id: Q-4
+    title: Алерт на рост очереди, масштабирование воркеров KEDA
+    hours: 3
+    status: todo
+    note: consumer lag / длина очереди; KEDA ScaledObject против HPA
+  - id: Q-5
+    title: 'Безопасность брокера: пользователи, права на очереди и топики, TLS'
+    hours: 2
+    status: todo
 - id: b5
+  num: '5'
   title: Безопасность
   days: 2 дня
-  target: до 17.11
+  target: до 19.11
   why: >-
     Закрыть дыры из docs/13-security.md. Sealed Secrets заодно делают переезд воспроизводимым: пароли
     тоже едут через git.
@@ -231,9 +307,10 @@ blocks:
     status: todo
     note: не root, без capabilities, seccomp
 - id: b6
+  num: '6'
   title: Генеральная репетиция переезда
-  days: 2 дня
-  target: до 20.11
+  days: 3 дня
+  target: до 24.11
   why: >-
     Доказать, что лаб воспроизводится кодом, а не держится на ручных правках. И решить судьбу лаба после
     27.12 заранее.
@@ -255,11 +332,28 @@ blocks:
     hours: 1
     status: todo
     note: крайний срок — 20.12
+  - id: 6-4
+    title: Ansible с Jinja2-шаблонами для подготовки нод
+    hours: 4
+    status: todo
+    note: sysctl, containerd, kubeadm-конфиг из шаблона — вместо stage2/*.sh
+  - id: 6-5
+    title: 'Python-скрипт против API: свежесть бэкапов в GCS или чистка образов в GHCR'
+    hours: 3
+    status: todo
+    note: argparse, обработка ошибок, логирование, exit codes
+  - id: 6-6
+    title: 'Bash-скрипты лаба к норме: set -euo pipefail, trap, функции, логи, shellcheck в CI'
+    hours: 2
+    status: todo
 - id: b7
+  num: '7'
   title: Загашник
   days: по желанию
   target: после 20.11
-  why: Когда основное пройдено и до конца триала остаётся время.
+  why: >-
+    Когда основное пройдено и до конца триала остаётся время. Виртуализацию (KVM, Proxmox) сюда не берём:
+    мало весит на собесе и съедает время.
   done_when: —
   steps:
   - id: 7-1
@@ -282,7 +376,4 @@ blocks:
     status: todo
   - id: 7-7
     title: Kafka изнутри на OTel Demo
-    status: todo
-  - id: 7-8
-    title: Алерты по логам в Loki
     status: todo
