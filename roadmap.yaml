@@ -5,14 +5,11 @@
 
 trial_end: '2026-12-27'
 today:
-  date: '2026-10-22'
-  focus: 'Шаг 1-3: снимок etcd и восстановление вместе с ключом шифрования'
+  date: '2026-10-31'
+  focus: 'Лаб не поднимаем: закреплён блок 8 и подготовка к собесам'
   steps:
   - 1-3
-  - 1-7
-  note: >-
-    Подъём по чек-листу, снимок → удалить ns demo → restore → проверка без ключа. Потом подготовка к HA:
-    цифры по двум новым мастерам и схема VIP в GCP — до создания машин нужно «ок».
+  note: Следующий шаг по маршруту — 1-3. Дата старта не назначена.
 blocks:
 - id: b1
   num: '1'
@@ -63,7 +60,8 @@ blocks:
     status: todo
     note: >-
       upgrade plan, release notes; мастера по одному уже в HA, воркеры с drain; после — шифрование и метрики
-      на месте
+      на месте. Весь апгрейд под нагрузкой: цикл запросов через ingress, счёт ошибок и пауз — иначе «без
+      простоя» в резюме нечем подтвердить
   - id: 1-5
     title: drain, PDB и отказ ноды
     hours: 3
@@ -74,6 +72,14 @@ blocks:
     hours: 2
     status: todo
     note: edit на нужные ns, --as для проверки, ServiceAccount с минимумом прав
+  - id: 1-8
+    title: 'Поломки ноды: kubelet, containerd, CoreDNS, часы'
+    hours: 3
+    status: todo
+    note: >-
+      остановить kubelet и containerd — что видит control plane и через сколько NotReady; CoreDNS в 0 реплик
+      и сломанный Corefile — как выглядит «у приложения не резолвится»; сдвинуть часы ноды — что ломается
+      в TLS и etcd
 - id: b2
   num: '2'
   title: Алерты и дежурство
@@ -108,7 +114,7 @@ blocks:
     status: todo
     note: что проверить, как починить, когда эскалировать
   - id: 2-5
-    title: 'Дни поломок: 5 сценариев'
+    title: 'Дни поломок: 5 сценариев, причина известна'
     hours: 6
     status: todo
     note: >-
@@ -130,7 +136,7 @@ blocks:
     status: todo
     note: >-
       сейчас логи собирает Alloy — решить: заменить на Fluent Bit или разобрать Alloy на том же уровне;
-      парсинг структурных логов
+      парсинг структурных логов. В резюме Fluent Bit — после решения поправить либо лаб, либо резюме
   - id: 2-9
     title: Алерты по логам в Loki
     hours: 2
@@ -150,7 +156,9 @@ blocks:
     title: 'Сервис на Go с Postgres: health, metrics, трейсы, логи'
     hours: 6
     status: todo
-    note: маленький API; /healthz, /readyz, /metrics, OTLP, структурные логи
+    note: >-
+      маленький API; /healthz, /readyz, /metrics, OTLP, структурные логи; Dockerfile multi-stage, distroless,
+      не root — размер образа до и после
   - id: 3-2
     title: 'CI на pull request: lint, тесты с Postgres, сборка, Trivy'
     hours: 3
@@ -180,7 +188,9 @@ blocks:
     title: 'Argo Rollouts: canary с анализом метрик'
     hours: 4
     status: todo
-    note: по желанию
+    note: >-
+      в резюме заявлено — не «по желанию»: кривая версия на canary, AnalysisTemplate по ошибкам и латентности,
+      автоматический abort; иначе строку из резюме убрать
   - id: 3-8
     title: 'Трейсы в Tempo: медленный запрос, связка трейс ↔ логи ↔ метрики'
     hours: 4
@@ -239,11 +249,6 @@ blocks:
     hours: 2
     status: todo
     note: алерт, если проверка не прошла
-  - id: 4-8
-    title: MongoDB replica set
-    hours: 4
-    status: todo
-    note: по желанию
 - id: bq
   num: Q
   title: Очереди и кэш
@@ -265,9 +270,12 @@ blocks:
     status: todo
     note: что видит сервис, сколько длится переключение
   - id: Q-3
-    title: 'RabbitMQ или Kafka: сервис публикует события, отдельный воркер читает'
+    title: 'RabbitMQ: сервис публикует события, отдельный воркер читает'
     hours: 5
     status: todo
+    note: >-
+      в резюме RabbitMQ; заодно сломать: упавший консьюмер без ack, сообщение-яд и DLQ, очередь, съевшая
+      память брокера
   - id: Q-4
     title: Алерт на рост очереди, масштабирование воркеров KEDA
     hours: 3
@@ -306,6 +314,13 @@ blocks:
     hours: 2
     status: todo
     note: не root, без capabilities, seccomp
+  - id: 5-5
+    title: 'Cilium изнутри: kube-proxy replacement, Hubble, отказ агента'
+    hours: 3
+    status: todo
+    note: >-
+      работает ли без kube-proxy и где теперь живут Service; Hubble — найти drop от NetworkPolicy из 5-3
+      по hubble observe, а не перебором; удалить cilium-agent на ноде — что с уже работающими подами и с новыми
 - id: b6
   num: '6'
   title: Генеральная репетиция переезда
@@ -346,6 +361,14 @@ blocks:
     title: 'Bash-скрипты лаба к норме: set -euo pipefail, trap, функции, логи, shellcheck в CI'
     hours: 2
     status: todo
+  - id: 6-7
+    title: 'Terraform: drift, import, state'
+    hours: 3
+    status: todo
+    note: >-
+      поменять правило firewall руками в консоли — plan в CI по расписанию ловит дрейф; ресурс, созданный
+      руками, — terraform import; вынос в модуль — moved/state mv без пересоздания; блокировка state в GCS:
+      два apply одновременно
 - id: b7
   num: '7'
   title: Загашник
@@ -360,7 +383,7 @@ blocks:
     title: Gateway API вместо ingress
     status: todo
   - id: 7-2
-    title: Cilium Hubble и L7 NetworkPolicy
+    title: 'Cilium: L7 NetworkPolicy'
     status: todo
   - id: 7-3
     title: 'Chaos Mesh: поломки по расписанию'
@@ -377,3 +400,45 @@ blocks:
   - id: 7-7
     title: Kafka изнутри на OTel Demo
     status: todo
+  - id: 7-8
+    title: MongoDB replica set
+    status: todo
+- id: b8
+  num: '8'
+  title: Защита
+  days: 2 дня + по ходу
+  target: до 20.12
+  why: >-
+    Интервьюер спрашивает не «что знаешь», а «что строил, где рухнуло, как разгребал». Тренировать
+    именно это: поломки вслепую, где причину не знаешь заранее, и разговор по своему же резюме.
+  done_when: >-
+    Пройдено 10 слепых инцидентов с разбором; каждая строка резюме и каждый пункт навыков ведут на шаг
+    с записью журнала или на рабочую историю; три мок-собеса по резюме без провисаний.
+  steps:
+  - id: 8-1
+    title: 'Слепые инциденты: 10 штук по ходу блоков 2–6'
+    hours: 10
+    status: todo
+    note: >-
+      не одним днём: по 2 в каждом блоке, как только в нём есть что ломать; протокол — в CLAUDE.md;
+      метрика — время от симптома до причины, ложные гипотезы, пришёл ли алерт
+  - id: 8-2
+    title: 'Сверка резюме: строка → шаг → запись журнала'
+    hours: 2
+    status: todo
+    note: >-
+      строка без записи — доделать или вычеркнуть; навыки — только то, про что есть история «сломал/починил»
+  - id: 8-3
+    title: 'Мок-собес по резюме ×3'
+    hours: 4
+    status: todo
+    note: >-
+      Claude в роли интервьюера из «не читаю список технологий»: берёт строку резюме и копает вглубь,
+      пока не упрётся; где провис — в журнал и на повтор
+  - id: 8-4
+    title: 'Три истории на 2–3 минуты'
+    hours: 2
+    status: todo
+    note: >-
+      три лучших инцидента (свои, не учебные): контекст, симптом, ложный след, причина, фикс, что поменял
+      после; рассказать вслух и записать
