@@ -6,10 +6,10 @@
 trial_end: '2026-12-27'
 today:
   date: '2026-11-05'
-  focus: 'Шаг 1-7: HA control plane. Машины созданы, дальше подготовка нод, VIP и join'
+  focus: 'Шаг 1-7 закрыт: три мастера и VIP. Следующий — 1-4, kubeadm upgrade 1.36 → 1.37'
   steps:
-  - 1-7
-  note: Подготовка k8s-cp2 и k8s-cp3, потом keepalived и HAProxy на k8s-cp, перевод кластера на VIP.
+  - 1-4
+  note: Апгрейд идёт мастер за мастером, уже через VIP. Версии пакетов закреплены в 01-prereqs.sh — при апгрейде менять там.
 blocks:
 - id: b1
   num: '1'
@@ -49,17 +49,16 @@ blocks:
   - id: 1-7
     title: 'HA control plane: 3 мастера за HAProxy + keepalived, VIP'
     hours: 8
-    status: now
+    status: done
+    done: '2026-11-05'
+    journal: '2026-11-05'
     note: >-
-      Уронить любой мастер — kubectl работает. Тяжелее заявленных 5 ч: controlPlaneEndpoint зашит адресом
-      k8s-cp (10.0.1.100) в сертификаты и kubeconfig всех нод — нужен VIP и перевыпуск; в GCP нет VRRP
-      multicast — keepalived в unicast, а VIP переезжает через alias IP или маршрут из notify-скрипта;
-      ключ шифрования etcd скопировать на новые мастера; etcd из 1 в 3 члена. +2 машины — цифры перед
-      созданием
+      docs/14-ha-control-plane.md. VIP 10.0.1.10:8443, alias IP через REST API GCP; etcd из трёх членов;
+      простой при падении главного мастера 8.9 с
   - id: 1-4
     title: kubeadm upgrade 1.36 → 1.37
     hours: 5
-    status: todo
+    status: now
     note: >-
       upgrade plan, release notes; мастера по одному уже в HA, воркеры с drain; после — шифрование и метрики
       на месте. Весь апгрейд под нагрузкой: цикл запросов через ingress, счёт ошибок и пауз — иначе «без
