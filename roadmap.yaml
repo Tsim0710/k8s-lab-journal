@@ -5,11 +5,11 @@
 
 trial_end: '2026-12-27'
 today:
-  date: '2026-11-02'
-  focus: 'Шаг 1-3 закрыт. Дальше — подготовка к шагу 1-7: HA control plane'
+  date: '2026-11-05'
+  focus: 'Шаг 1-7: HA control plane. Машины созданы, дальше подготовка нод, VIP и join'
   steps:
   - 1-7
-  note: Сначала схема и цифры по двум новым мастерам, машины создаются после «ок». Первым делом make etcd-backup.
+  note: Подготовка k8s-cp2 и k8s-cp3, потом keepalived и HAProxy на k8s-cp, перевод кластера на VIP.
 blocks:
 - id: b1
   num: '1'
