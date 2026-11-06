@@ -6,10 +6,10 @@
 trial_end: '2026-12-27'
 today:
   date: '2026-11-06'
-  focus: 'Шаг 1-4 закрыт: кластер на 1.37.2. Следующий — 1-5, drain, PDB и отказ ноды'
+  focus: 'Шаги 1-4 и 1-5 закрыты: кластер на 1.37.2, отказ воркера отрепетирован. Следующий — 1-6, RBAC'
   steps:
-  - 1-5
-  note: Материал из апгрейда — CoreDNS без PDB, базы на local-path привязаны к одной ноде, поды после drain не возвращаются.
+  - 1-6
+  note: Падение одного воркера уносит весь мониторинг — он на локальных дисках этой ноды.
 blocks:
 - id: b1
   num: '1'
@@ -67,12 +67,16 @@ blocks:
   - id: 1-5
     title: drain, PDB и отказ ноды
     hours: 3
-    status: now
-    note: погасить w2 и засечь, когда поды уедут; что с StatefulSet и PVC на local-path
+    status: done
+    done: '2026-11-06'
+    journal: '2026-11-06'
+    note: >-
+      docs/12-operations.md. PDB для CoreDNS; отказ w2: NotReady через 81 с, выселение через 5 мин,
+      StatefulSet'ы на local-path не переехали — мониторинг лёг вместе с нодой
   - id: 1-6
     title: 'RBAC: свой пользователь вместо admin.conf'
     hours: 2
-    status: todo
+    status: now
     note: edit на нужные ns, --as для проверки, ServiceAccount с минимумом прав
   - id: 1-8
     title: 'Поломки ноды: kubelet, containerd, CoreDNS, часы'
