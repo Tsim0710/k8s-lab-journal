@@ -5,11 +5,11 @@
 
 trial_end: '2026-12-27'
 today:
-  date: '2026-11-06'
-  focus: 'Шаги 1-4 и 1-5 закрыты: кластер на 1.37.2, отказ воркера отрепетирован. Следующий — 1-6, RBAC'
+  date: '2026-11-07'
+  focus: 'Шаг 1-6 закрыт: свой пользователь по сертификату, права группе через GitOps, ServiceAccount с минимумом. Следующий — 1-8'
   steps:
-  - 1-6
-  note: Падение одного воркера уносит весь мониторинг — он на локальных дисках этой ноды.
+  - 1-8
+  note: Последний шаг блока 1 — после него карточка защиты и строки для резюме.
 blocks:
 - id: b1
   num: '1'
@@ -76,12 +76,16 @@ blocks:
   - id: 1-6
     title: 'RBAC: свой пользователь вместо admin.conf'
     hours: 2
-    status: now
-    note: edit на нужные ns, --as для проверки, ServiceAccount с минимумом прав
+    status: done
+    done: '2026-11-07'
+    journal: '2026-11-07'
+    note: >-
+      docs/13-security.md. Пользователь через CSR API, группе view на кластер и edit в трёх ns, ServiceAccount
+      со своей Role; ловушка --as без --as-group. OIDC и аудит не делали
   - id: 1-8
     title: 'Поломки ноды: kubelet, containerd, CoreDNS, часы'
     hours: 3
-    status: todo
+    status: now
     note: >-
       остановить kubelet и containerd — что видит control plane и через сколько NotReady; CoreDNS в 0 реплик
       и сломанный Corefile — как выглядит «у приложения не резолвится»; сдвинуть часы ноды — что ломается
