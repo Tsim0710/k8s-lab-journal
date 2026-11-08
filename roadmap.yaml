@@ -6,10 +6,10 @@
 trial_end: '2026-12-27'
 today:
   date: '2026-11-08'
-  focus: 'Шаг 1-8 — поломки ноды: kubelet, containerd, CoreDNS, часы. Последний в блоке 1'
+  focus: 'Блок 1 закрыт: поломки ноды, CoreDNS и часы разобраны, карточка защиты в журнале. Следующий — 2-1, ревизия алертов'
   steps:
-  - 1-8
-  note: Последний шаг блока 1 — после него карточка защиты и строки для резюме.
+  - 2-1
+  note: Алерт при отказе ноды не приходит — мониторинг на тех же нодах. С этого и начинать блок 2.
 blocks:
 - id: b1
   num: '1'
@@ -85,11 +85,12 @@ blocks:
   - id: 1-8
     title: 'Поломки ноды: kubelet, containerd, CoreDNS, часы'
     hours: 3
-    status: now
+    status: done
+    done: '2026-11-08'
+    journal: '2026-11-08'
     note: >-
-      остановить kubelet и containerd — что видит control plane и через сколько NotReady; CoreDNS в 0 реплик
-      и сломанный Corefile — как выглядит «у приложения не резолвится»; сдвинуть часы ноды — что ломается
-      в TLS и etcd
+      docs/12-operations.md. kubelet: NotReady через 46 с, контейнеры живы, замены не влезли; CoreDNS 0 — 4.8 с
+      на имя; Corefile — reload failed, мина до рестарта; часы — x509 после переподключения. containerd и часы на мастере (etcd) не делали
 - id: b2
   num: '2'
   title: Алерты и дежурство
@@ -105,7 +106,7 @@ blocks:
   - id: 2-1
     title: 'Ревизия: что стреляет сейчас и что из этого шум'
     hours: 2
-    status: todo
+    status: now
     note: >-
       ~150 правил kube-prometheus-stack, Watchdog, InfoInhibitor; список «оставить / заглушить / переписать»
   - id: 2-2
