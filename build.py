@@ -13,6 +13,7 @@ import datetime as dt
 import html
 import re
 import sys
+import urllib.parse
 from pathlib import Path
 
 import markdown
@@ -22,6 +23,12 @@ ROOT = Path(__file__).resolve().parent
 SITE = ROOT / "site"
 STATUSES = {"done", "now", "todo"}
 STATUS_LABEL = {"done": "сделано", "now": "сейчас", "todo": ""}
+# Иконка вкладки плана повторения — очки на синем квадрате, инлайн, без отдельного файла
+REVIEW_ICON = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">'
+               '<rect width="64" height="64" rx="14" fill="#2f5fd0"/>'
+               '<g fill="none" stroke="#fff" stroke-width="5" stroke-linecap="round">'
+               '<circle cx="19" cy="37" r="10"/><circle cx="45" cy="37" r="10"/>'
+               '<path d="M29 35q3-4 6 0M9 34 5 24M55 34l4-10"/></g></svg>')
 
 
 def load_roadmap() -> dict:
@@ -124,9 +131,11 @@ def ddmm(iso: str) -> str:
     return f"{d.day:02d}.{d.month:02d}"
 
 
-def page(title: str, body: str, prefix: str = "") -> str:
+def page(title: str, body: str, prefix: str = "", icon: str = "") -> str:
     tpl = (ROOT / "web" / "page.html").read_text(encoding="utf-8")
-    return tpl.replace("{{TITLE}}", esc(title)).replace("{{PREFIX}}", prefix).replace("{{BODY}}", body)
+    link = f'<link rel="icon" href="data:image/svg+xml,{urllib.parse.quote(icon)}">\n' if icon else ""
+    return (tpl.replace("{{TITLE}}", esc(title)).replace("{{ICON}}", link)
+            .replace("{{PREFIX}}", prefix).replace("{{BODY}}", body))
 
 
 def step_row(s: dict, prefix: str) -> str:
@@ -329,7 +338,7 @@ def build_review(rv: dict) -> str:
   }});
 }})();
 </script>'''
-    return page("План повторения", body)
+    return page("План повторения", body, icon=REVIEW_ICON)
 
 
 def main() -> int:
