@@ -33,7 +33,8 @@ topics:
     gdoc: ['Kubernetes: «Памятка-оси»', 'Kubernetes: M1, M2, M3']
     lab: [01-cluster до «etcd», 14-ha-control-plane]
     drill: ['k8s: architecture, kubelet-runtime, api-model']
-    status: now
+    status: done
+    done: '2026-11-09'
 
   - id: 2
     title: Наблюдаемость
@@ -41,7 +42,7 @@ topics:
     gdoc: ['Kubernetes: M20', 'Сети: M18, разделы 4–6']
     lab: [03-observability, 07-microservices-otel-demo]
     drill: ['k8s: observability']
-    status: todo
+    status: now
 
   - id: 3
     title: Эксплуатация кластера
