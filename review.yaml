@@ -1,0 +1,136 @@
+# План повторения конспектов — источник правды для страницы review.html.
+# Подробно, с объяснением порядка, — k8s-lab-infra/docs/interview/review-plan.md (приватное репо).
+#
+# status: todo | now | done. Тема «now» — ровно одна.
+# done — дата первого прохода. repeats — сделанные повторы: {date, clean}.
+# Следующий повтор считается сам: после первого прохода +7 дней, после чистого повтора +21,
+# после повтора с провалами +7. weak — что провисло, коротко и по делу.
+
+start: '2026-11-09'
+drill_url: https://tsim0710.github.io/devops-anki/
+
+daily: >-
+  Тренажёр 10–15 минут: домен k8s, уровни middle и senior, подтемы уже пройденных тем вперемешку.
+
+method:
+  - Вспомнить без подсказок — вопросы из «📌» модулей (у сетей — «Грабли»), ответ вслух
+  - «🎯 Ситуации» — сначала свой ответ вслух, потом сверка
+  - Тело модуля — только там, где споткнулся
+  - Конспект лаба по теме и «Вопросы на собесе» в конце файла — вслух
+  - Тренажёр — подтемы темы, middle и senior
+  - Записать, что провисло
+
+before_interview:
+  - Kubernetes, «Памятка-оси» — целиком
+  - Сети, справочник — часть 1 бегло, часть 2 вслух, «Философия» и «Мои личные грабли»
+  - interview/rbac.md и «Вопросы на собесе» по темам вакансии
+  - Журнал за 08.11 — карточка защиты блока 1 и строки для резюме
+  - interview/resume-map.md — по каждой строке вспомнить шаг маршрута
+
+topics:
+  - id: 1
+    title: Оси + архитектура
+    gdoc: ['Kubernetes: «Памятка-оси»', 'Kubernetes: M1, M2, M3']
+    lab: [01-cluster до «etcd», 14-ha-control-plane]
+    drill: ['k8s: architecture, kubelet-runtime, api-model']
+    status: now
+
+  - id: 2
+    title: Наблюдаемость
+    why: к блоку 2 лаба
+    gdoc: ['Kubernetes: M20', 'Сети: M18, разделы 4–6']
+    lab: [03-observability, 07-microservices-otel-demo]
+    drill: ['k8s: observability']
+    status: todo
+
+  - id: 3
+    title: Эксплуатация кластера
+    gdoc: ['Kubernetes: M22 — только сверка с лабом']
+    lab: [01-cluster «etcd», 12-operations целиком]
+    drill: ['k8s: bootstrap']
+    status: todo
+
+  - id: 4
+    title: Поды и контроллеры
+    gdoc: ['Kubernetes: M4, M5, M6']
+    lab: [04-workloads до «requests», 11-objects первые два раздела]
+    drill: ['k8s: pods, probes, workload-controllers, labels-selectors']
+    status: todo
+
+  - id: 5
+    title: Ресурсы и планирование
+    gdoc: ['Kubernetes: M13, M14, M15']
+    lab: [04-workloads requests и HPA, 12-operations «Отказ ноды», 06 — неравномерные поды]
+    drill: ['k8s: scheduling, placement, autoscaling']
+    status: todo
+
+  - id: 6
+    title: Конфиг, секреты, хранилище
+    gdoc: ['Kubernetes: M7, M8']
+    lab: [02-platform local-path, 08-databases, 13-security «Шифрование секретов»]
+    drill: ['k8s: config-secrets, storage']
+    status: todo
+
+  - id: 7
+    title: Доступ и безопасность
+    gdoc: ['Kubernetes: M16, M17, M18']
+    lab: [13-security RBAC и слабые места, interview/rbac.md]
+    drill: ['k8s: rbac, namespaces-quotas, pod-security']
+    status: todo
+
+  - id: 8
+    title: Сеть подов
+    gdoc: ['Сети: M13, M14', 'Kubernetes: M9']
+    lab: [01-cluster «Cilium и сеть»]
+    drill: ['сети: linux-netns, container-networking', 'k8s: cluster-networking']
+    status: todo
+
+  - id: 9
+    title: Service и DNS
+    gdoc: ['Kubernetes: M10, M11', 'Сети: M7']
+    lab: [11-objects целиком]
+    drill: ['k8s: services, cluster-dns', 'сети: dns']
+    status: todo
+
+  - id: 10
+    title: Вход снаружи
+    gdoc: ['Kubernetes: M12', 'Сети: M9, M10, M11, M12']
+    lab: [02-platform ingress и cert-manager, 10-cloudflare, 14 — HAProxy]
+    drill: ['k8s: ingress', 'сети: tls, http, proxy-cdn, load-balancing']
+    status: todo
+
+  - id: 11
+    title: Диагностика
+    gdoc: ['Kubernetes: M19, «Памятка-оси» п. 7–8', 'Сети: M18, справочник части 2–3']
+    lab: [06-troubleshooting, 12-operations «Поломки ноды и DNS»]
+    drill: ['k8s: troubleshooting', 'сети: diagnostics']
+    status: todo
+
+  - id: 12
+    title: GitOps и CI
+    gdoc: ['Kubernetes: M21']
+    lab: [05-argocd, 09-ci-terraform]
+    drill: ['k8s: packaging-gitops', 'cicd, terraform — по желанию']
+    status: todo
+
+  - id: 13
+    title: Сетевой фундамент
+    gdoc: ['Сети: M1–M8, справочник часть 1, фазы 1–2']
+    lab: []
+    drill: ['сети: osi-model, ipv4-addressing, ethernet-arp, dhcp, routing, bgp-ospf, nat, tcp-udp, ipv6']
+    status: todo
+
+  - id: 14
+    title: Облако, VPN, firewall
+    gdoc: ['Сети: M15, M16, M17, «Чекпоинт фазы 4»']
+    lab: [CLAUDE.md «Чем GCP отличается», 09-ci-terraform]
+    drill: ['сети: vpn-tunnels, firewall, cloud-vpc', 'gcp — по желанию']
+    status: todo
+
+  - id: 15
+    title: Операторы, Cilium, mesh
+    why: по остатку
+    gdoc: ['Kubernetes: M23, M24, M25']
+    lab: []
+    drill: ['k8s: crd-operators, ebpf-cilium, service-mesh']
+    status: todo

@@ -92,9 +92,26 @@ li.step.now { background: var(--now-soft); border-radius: 4px; }
 .md th { background: var(--surface); font-weight: 600; }
 
 footer { color: var(--muted); font-size: 13px; }
+
+/* план повторения: источники темы, шаги текущей темы, сроки повторов */
+.review-link { margin: -12px 0 0; font-size: 14px; }
+.src, .weak { display: grid; grid-template-columns: 84px minmax(0, 1fr); gap: 0 10px; font-size: 13.5px; margin-top: 3px; }
+.src-k { font-family: var(--font-mono); font-size: 11.5px; letter-spacing: .04em; color: var(--muted); padding-top: 1px; }
+.weak { color: var(--now); }
+.pill.rep { background: var(--code-bg); color: var(--muted); }
+.checklist { margin: 4px 0 0; padding-left: 22px; display: grid; gap: 4px; }
+.checklist label { cursor: pointer; }
+.checklist input { margin-right: 6px; accent-color: var(--accent); }
+.due-box { display: grid; gap: 6px; }
+.due-box[hidden] { display: none; }
+.due-box ul { margin: 0; padding-left: 20px; }
+.h.next.on, .h.next.late { color: var(--now); font-weight: 500; }
+li.step.due { box-shadow: inset 3px 0 0 var(--now); }
+ol.plain { margin: 0; padding-left: 22px; display: grid; gap: 4px; max-width: 70ch; }
 @media (max-width: 540px) {
   li.step { grid-template-columns: 16px 34px minmax(0, 1fr); }
   li.step .h { grid-column: 3; padding-top: 0; }
+  .src, .weak { grid-template-columns: 1fr; }
   .block-head { grid-template-columns: auto 1fr; }
   .block-meta { grid-column: 2; }
   h1 { font-size: 26px; }
