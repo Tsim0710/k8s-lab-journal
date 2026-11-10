@@ -6,9 +6,10 @@
 trial_end: '2026-12-27'
 today:
   date: '2026-11-10'
-  focus: 'Блок 2 «Алерты и дежурство» начат: 2-1 — ревизия, что стреляет сейчас и что из этого шум'
+  focus: '2-1 закрыт: 159 правил разобраны, нашли слепой с 08.11 Prometheus — мина от опыта с часами. Следующий — 2-2, Alertmanager → Telegram'
   steps:
   - 2-1
+  - 2-2
   note: Алерт при отказе ноды не приходит — мониторинг на тех же нодах. С этого и начинать блок 2.
 blocks:
 - id: b1
@@ -106,13 +107,15 @@ blocks:
   - id: 2-1
     title: 'Ревизия: что стреляет сейчас и что из этого шум'
     hours: 2
-    status: now
+    status: done
+    done: '2026-11-10'
+    journal: '2026-11-10'
     note: >-
       ~150 правил kube-prometheus-stack, Watchdog, InfoInhibitor; список «оставить / заглушить / переписать»
   - id: 2-2
     title: Alertmanager → Telegram
     hours: 3
-    status: todo
+    status: now
     note: бот, маршруты по severity, группировка, inhibit, повтор; секрет бота — через secrets/
   - id: 2-3
     title: 'Свои алерты: ноды, диск, сертификаты, etcd, бэкапы'
@@ -140,7 +143,7 @@ blocks:
     title: 'Решение по памяти: убрать OTel Demo или третий воркер'
     hours: 1
     status: todo
-    note: на воркерах 70–80% по requests; CNPG и свой сервис не влезут
+    note: 'на воркерах 70–80% по requests; CNPG и свой сервис не влезут; Prometheus внутри OTel Demo убивается по памяти на 400Mi, k8s-w1 CPU 80% — вариант: метрики демо в основной Prometheus по OTLP, свой выключить'
   - id: 2-8
     title: 'Пайплайн логов: Fluent Bit → Loki, JSON-логи, лейблы namespace/app'
     hours: 3
