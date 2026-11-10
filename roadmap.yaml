@@ -6,10 +6,11 @@
 trial_end: '2026-12-27'
 today:
   date: '2026-11-10'
-  focus: '2-1 закрыт: 159 правил разобраны, нашли слепой с 08.11 Prometheus — мина от опыта с часами. Следующий — 2-2, Alertmanager → Telegram'
+  focus: 'Закрыты 2-1 и 2-2: 159 правил разобраны, слепой с 08.11 Prometheus вылечен, алерты идут в Telegram, Watchdog — во внешний heartbeat. Следующий — 2-3, свои правила с тестами promtool'
   steps:
   - 2-1
   - 2-2
+  - 2-3
   note: Алерт при отказе ноды не приходит — мониторинг на тех же нодах. С этого и начинать блок 2.
 blocks:
 - id: b1
@@ -115,12 +116,14 @@ blocks:
   - id: 2-2
     title: Alertmanager → Telegram
     hours: 3
-    status: now
+    status: done
+    done: '2026-11-10'
+    journal: '2026-11-10'
     note: бот, маршруты по severity, группировка, inhibit, повтор; секрет бота — через secrets/
   - id: 2-3
     title: 'Свои алерты: ноды, диск, сертификаты, etcd, бэкапы'
     hours: 3
-    status: todo
+    status: now
     note: 'алерты на симптомы, а не «CPU 80%»; etcd: has_leader, fsync p99, размер базы к квоте; inotify: метрика занятых экземпляров по uid через textfile collector, алерт на 80% лимита; правила — PrometheusRule в gitops, к каждому юнит-тест promtool test rules, в CI gitops promtool check rules + test rules'
   - id: 2-4
     title: Runbooks в docs/runbooks и runbook_url в алертах
