@@ -118,7 +118,7 @@ blocks:
     title: 'Свои алерты: ноды, диск, сертификаты, etcd, бэкапы'
     hours: 3
     status: todo
-    note: 'алерты на симптомы, а не «CPU 80%»; etcd: has_leader, fsync p99, размер базы к квоте; inotify: метрика занятых экземпляров по uid через textfile collector, алерт на 80% лимита'
+    note: 'алерты на симптомы, а не «CPU 80%»; etcd: has_leader, fsync p99, размер базы к квоте; inotify: метрика занятых экземпляров по uid через textfile collector, алерт на 80% лимита; правила — PrometheusRule в gitops, к каждому юнит-тест promtool test rules, в CI gitops promtool check rules + test rules'
   - id: 2-4
     title: Runbooks в docs/runbooks и runbook_url в алертах
     hours: 2
