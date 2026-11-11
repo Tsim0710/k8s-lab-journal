@@ -6,11 +6,12 @@
 trial_end: '2026-12-27'
 today:
   date: '2026-11-11'
-  focus: '2-3 закрыт: 9 своих алертов с юнит-тестами promtool и CI, WorkersOvercommit сразу показал, что потерю воркера кластер не переживёт. Следующий — 2-4, свои runbook и runbook_url'
+  focus: 'Закрыты 2-3 и 2-7: свои алерты с тестами, а кластер перекроен в лимите триала — один мастер и три воркера по 16 GB, потерю воркера теперь переживём. Следующий — 2-4, свои runbook'
   steps:
   - 2-3
+  - 2-7
   - 2-4
-  note: 'Мониторинг следит и за собой: смерть — heartbeat снаружи (2-2), слепота — PrometheusNoData (2-3). Горит WorkersOvercommit — ждёт 2-7'
+  note: 'Мониторинг следит и за собой: смерть — heartbeat снаружи (2-2), слепота — PrometheusNoData (2-3). WorkersOvercommit погас после 2-7'
 blocks:
 - id: b1
   num: '1'
@@ -146,7 +147,9 @@ blocks:
   - id: 2-7
     title: 'Решение по памяти: убрать OTel Demo или третий воркер'
     hours: 1
-    status: todo
+    status: done
+    done: '2026-11-11'
+    journal: '2026-11-11'
     note: 'на воркерах 70–80% по requests; CNPG и свой сервис не влезут; Prometheus внутри OTel Demo убивается по памяти на 400Mi, k8s-w1 CPU 80% — вариант: метрики демо в основной Prometheus по OTLP, свой выключить'
   - id: 2-8
     title: 'Пайплайн логов: Fluent Bit → Loki, JSON-логи, лейблы namespace/app'
