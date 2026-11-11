@@ -5,13 +5,12 @@
 
 trial_end: '2026-12-27'
 today:
-  date: '2026-11-10'
-  focus: 'Закрыты 2-1 и 2-2: 159 правил разобраны, слепой с 08.11 Prometheus вылечен, алерты идут в Telegram, Watchdog — во внешний heartbeat. Следующий — 2-3, свои правила с тестами promtool'
+  date: '2026-11-11'
+  focus: '2-3 закрыт: 9 своих алертов с юнит-тестами promtool и CI, WorkersOvercommit сразу показал, что потерю воркера кластер не переживёт. Следующий — 2-4, свои runbook и runbook_url'
   steps:
-  - 2-1
-  - 2-2
   - 2-3
-  note: Алерт при отказе ноды не приходит — мониторинг на тех же нодах. С этого и начинать блок 2.
+  - 2-4
+  note: 'Мониторинг следит и за собой: смерть — heartbeat снаружи (2-2), слепота — PrometheusNoData (2-3). Горит WorkersOvercommit — ждёт 2-7'
 blocks:
 - id: b1
   num: '1'
@@ -123,12 +122,14 @@ blocks:
   - id: 2-3
     title: 'Свои алерты: ноды, диск, сертификаты, etcd, бэкапы'
     hours: 3
-    status: now
+    status: done
+    done: '2026-11-11'
+    journal: '2026-11-11'
     note: 'алерты на симптомы, а не «CPU 80%»; etcd: has_leader, fsync p99, размер базы к квоте; inotify: метрика занятых экземпляров по uid через textfile collector, алерт на 80% лимита; правила — PrometheusRule в gitops, к каждому юнит-тест promtool test rules, в CI gitops promtool check rules + test rules'
   - id: 2-4
     title: Runbooks в docs/runbooks и runbook_url в алертах
     hours: 2
-    status: todo
+    status: now
     note: что проверить, как починить, когда эскалировать
   - id: 2-5
     title: 'Дни поломок: 5 сценариев, причина известна'
