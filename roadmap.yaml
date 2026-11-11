@@ -252,7 +252,6 @@ blocks:
       переезжает astronomy-db — база магазина OTel Demo: accounting пишет заказы, product-catalog
       читает каталог, генератор нагрузки покупает постоянно. Сейчас Deployment без тома с лимитом
       100Mi — при каждом рестарте пода заказы пропадают (11.11 так и вышло на drain)
-
   - id: 4-3
     title: 'WAL-архив и base backup в GCS; бакет: версии, lifecycle, шифрование, аудит'
     hours: 6
