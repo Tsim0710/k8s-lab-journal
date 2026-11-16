@@ -1,6 +1,5 @@
 ---
 title: Сайт не открывается
-kind: situation
 checked: '2026-11-11'
 journal: ['2026-11-11']
 ---
@@ -27,10 +26,10 @@ journal: ['2026-11-11']
 
 ## Как чинить
 
-- 503, нет готовых подов — [поды не готовы](pods.html)
+- 503, нет готовых подов — [поды не готовы](../runbooks/pods.html)
 - 504 по таймауту соединения при живых подах — политика не пускает ingress. Наш ingress на hostNetwork,
   его пакеты идут с адреса ноды: нужна CiliumNetworkPolicy с `fromEntities: [host, remote-node]`
-- 526 — [сертификат](certificates.html)
+- 526 — [сертификат](../runbooks/certificates.html)
 
 ## Чтобы не повторилось
 

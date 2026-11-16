@@ -6,7 +6,7 @@
 
 Источник правды — roadmap.yaml (план и статусы), journal/<дата>.md (записи по дням)
 и review.yaml (план повторения конспектов), runbooks/<slug>.md — runbook'и, на них ведут
-ссылки runbook_url из алертов.
+ссылки runbook_url из алертов, situations/<slug>.md — что делать по симптому.
 """
 
 import argparse
@@ -50,22 +50,22 @@ def load_journal() -> list[dict]:
 
 
 def load_runbooks() -> list[dict]:
-    """runbooks/<slug>.md: заголовок --- title, alerts ---, дальше markdown.
-    Ссылка из алерта — runbooks/<slug>.html, поэтому slug меняется только вместе с runbook_url.
-    kind: situation — страница по симптому, без алертов: checked — дата, когда прожили руками,
+    """runbooks/<slug>.md — по алертам: заголовок --- title, alerts ---. Ссылка из алерта —
+    runbooks/<slug>.html, поэтому slug меняется только вместе с runbook_url.
+    situations/<slug>.md — по симптому, без алертов: checked — дата, когда прожили руками,
     journal — записи журнала с этой историей."""
     books = []
-    for path in sorted((ROOT / "runbooks").glob("*.md")):
-        text = path.read_text(encoding="utf-8")
-        m = re.match(r"^---\n(.*?)\n---\n(.*)$", text, re.S)
-        if not m:
-            raise SystemExit(f"runbooks/{path.name}: нет заголовка --- title/alerts ---")
-        meta = yaml.safe_load(m.group(1)) or {}
-        books.append({"slug": path.stem, "title": meta.get("title", path.stem),
-                      "kind": meta.get("kind", "alert"),
-                      "alerts": [str(a) for a in meta.get("alerts", [])],
-                      "checked": str(meta["checked"]) if meta.get("checked") else "",
-                      "journal": [str(j) for j in meta.get("journal", [])], "body": m.group(2)})
+    for kind, folder in (("alert", "runbooks"), ("situation", "situations")):
+        for path in sorted((ROOT / folder).glob("*.md")):
+            text = path.read_text(encoding="utf-8")
+            m = re.match(r"^---\n(.*?)\n---\n(.*)$", text, re.S)
+            if not m:
+                raise SystemExit(f"{folder}/{path.name}: нет заголовка --- title ---")
+            meta = yaml.safe_load(m.group(1)) or {}
+            books.append({"slug": path.stem, "title": meta.get("title", path.stem), "kind": kind,
+                          "folder": folder, "alerts": [str(a) for a in meta.get("alerts", [])],
+                          "checked": str(meta["checked"]) if meta.get("checked") else "",
+                          "journal": [str(j) for j in meta.get("journal", [])], "body": m.group(2)})
     return books
 
 
@@ -73,13 +73,11 @@ def validate_runbooks(books: list[dict]) -> list[str]:
     errors, seen = [], {}
     for b in books:
         if not re.fullmatch(r"[a-z0-9-]+", b["slug"]):
-            errors.append(f"runbooks/{b['slug']}.md: имя файла — строчные буквы, цифры и дефис")
-        if b["kind"] not in ("alert", "situation"):
-            errors.append(f"runbooks/{b['slug']}.md: kind — alert или situation")
+            errors.append(f"{b['folder']}/{b['slug']}.md: имя файла — строчные буквы, цифры и дефис")
         if b["kind"] == "alert" and not b["alerts"]:
             errors.append(f"runbooks/{b['slug']}.md: пустой список alerts")
         if b["kind"] == "situation" and b["alerts"]:
-            errors.append(f"runbooks/{b['slug']}.md: у ситуации нет alerts — это страница по симптому")
+            errors.append(f"situations/{b['slug']}.md: у ситуации нет alerts — это страница по симптому")
         for a in b["alerts"]:
             if a in seen:
                 errors.append(f"алерт {a} описан и в {seen[a]}, и в {b['slug']}")
@@ -257,7 +255,8 @@ def build_index(rm: dict, journal: list[dict]) -> str:
                '<a href="https://github.com/Tsim0710/k8s-lab-journal">исходники</a> · '
                '<a href="https://tsim0710.github.io/devops-anki/">карточки devops-anki</a> · '
                '<a href="review.html">план повторения</a> · '
-               '<a href="runbooks/index.html">runbook\'и</a></footer>')
+               '<a href="runbooks/index.html">runbook\'и</a> · '
+               '<a href="situations/index.html">ситуации</a></footer>')
     return page("Маршрут k8s-лаба", "\n".join(out))
 
 
@@ -285,7 +284,7 @@ def build_runbook(b: dict) -> str:
     else:
         chips = "".join(f'<span class="chip mono">{esc(a)}</span>' for a in b["alerts"])
     body = f'''
-<nav class="back"><a href="index.html">← все runbook'и</a></nav>
+<nav class="back"><a href="index.html">← {"все ситуации" if b["kind"] == "situation" else "все runbook'и"}</a></nav>
 <article class="entry">
   <div class="label">{"ситуация" if b["kind"] == "situation" else "runbook"}</div>
   <h1>{esc(b["title"])}</h1>
@@ -296,10 +295,6 @@ def build_runbook(b: dict) -> str:
 
 
 def build_runbooks_index(books: list[dict]) -> str:
-    situations = "".join(
-        f'<li><a href="{esc(b["slug"])}.html">{esc(b["title"])}</a>'
-        f'<div class="note">{"проверено руками " + ddmm(b["checked"]) if b["checked"] else "не проверено руками"}</div></li>'
-        for b in books if b["kind"] == "situation")
     rows = "".join(
         f'<li><a href="{esc(b["slug"])}.html">{esc(b["title"])}</a>'
         f'<div class="note mono">{esc(", ".join(b["alerts"]))}</div></li>' for b in books if b["kind"] == "alert")
@@ -307,17 +302,30 @@ def build_runbooks_index(books: list[dict]) -> str:
 <nav class="back"><a href="../index.html">← маршрут</a></nav>
 <article class="entry">
   <div class="label">runbook'и</div>
-  <h1>Что делать, когда что-то сломалось</h1>
-  <h2>Ситуации</h2>
-  <p>По симптому, когда алерта может и не быть. «Проверено руками» — прожито в лабе, дата ведёт в
-  журнал.</p>
-  <ul class="runbooks">{situations}</ul>
-  <h2>По алертам</h2>
+  <h1>Что делать, когда пришёл алерт</h1>
   <p>Сюда ведут ссылки runbook из сообщений в Telegram. Под каждым заголовком — алерты, которые
-  ведут на эту страницу. Алерта нет в списке — начинай с «Порядка разбора».</p>
+  ведут на эту страницу. Алерта нет в списке — начинай с «Порядка разбора». Случилось что-то, а
+  алерта нет — <a href="../situations/index.html">ситуации</a>.</p>
   <ul class="runbooks">{rows}</ul>
 </article>'''
     return page("Runbook'и", body, "../")
+
+
+def build_situations_index(books: list[dict]) -> str:
+    rows = "".join(
+        f'<li><a href="{esc(b["slug"])}.html">{esc(b["title"])}</a>'
+        f'<div class="note">{"проверено руками " + ddmm(b["checked"]) if b["checked"] else "не проверено руками"}</div></li>'
+        for b in books if b["kind"] == "situation")
+    body = f'''
+<nav class="back"><a href="../index.html">← маршрут</a></nav>
+<article class="entry">
+  <div class="label">ситуации</div>
+  <h1>Что делать, если сломалось, а алерта нет</h1>
+  <p>Страницы по симптому. «Проверено руками» — прожито в лабе, дата ведёт в журнал. Пришёл алерт —
+  ссылка в сообщении ведёт в <a href="../runbooks/index.html">runbook'и</a>.</p>
+  <ul class="runbooks">{rows}</ul>
+</article>'''
+    return page("Ситуации", body, "../")
 
 
 def src_rows(t: dict) -> str:
@@ -436,7 +444,8 @@ def main() -> int:
         return 1
     n = sum(len(b["steps"]) for b in rm["blocks"])
     print(f"ok: {len(rm['blocks'])} блоков, {n} шагов, {len(journal)} записей журнала, "
-          f"{len(rv['topics'])} тем повторения, {len(books)} runbook'ов")
+          f"{len(rv['topics'])} тем повторения, {sum(b['kind'] == 'alert' for b in books)} runbook'ов, "
+          f"{sum(b['kind'] == 'situation' for b in books)} ситуаций")
     if args.validate:
         return 0
     (SITE / "journal").mkdir(parents=True, exist_ok=True)
@@ -444,12 +453,14 @@ def main() -> int:
     for e in journal:
         (SITE / "journal" / f"{e['date']}.html").write_text(build_entry(e, rm), encoding="utf-8")
     (SITE / "review.html").write_text(build_review(rv), encoding="utf-8")
-    (SITE / "runbooks").mkdir(parents=True, exist_ok=True)
+    for folder in ("runbooks", "situations"):
+        (SITE / folder).mkdir(parents=True, exist_ok=True)
     (SITE / "runbooks" / "index.html").write_text(build_runbooks_index(books), encoding="utf-8")
+    (SITE / "situations" / "index.html").write_text(build_situations_index(books), encoding="utf-8")
     for b in books:
-        (SITE / "runbooks" / f"{b['slug']}.html").write_text(build_runbook(b), encoding="utf-8")
+        (SITE / b["folder"] / f"{b['slug']}.html").write_text(build_runbook(b), encoding="utf-8")
     (SITE / ".nojekyll").write_text("")
-    print(f"собрано: site/index.html + {len(journal)} страниц журнала + site/review.html + {len(books)} runbook'ов")
+    print(f"собрано: site/index.html + {len(journal)} страниц журнала + site/review.html + runbooks/ + situations/")
     return 0
 
 

@@ -1,6 +1,5 @@
 ---
 title: Откатить кластер к снимку etcd
-kind: situation
 checked: '2026-11-02'
 journal: ['2026-11-02']
 ---

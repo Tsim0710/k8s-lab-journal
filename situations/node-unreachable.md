@@ -1,6 +1,5 @@
 ---
 title: Нода NotReady и не пускает по SSH
-kind: situation
 checked: '2026-11-02'
 journal: ['2026-11-02', '2026-11-08']
 ---

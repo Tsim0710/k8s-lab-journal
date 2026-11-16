@@ -1,6 +1,5 @@
 ---
 title: ArgoCD затёр или откатил изменения
-kind: situation
 checked: '2026-10-19'
 journal: ['2026-10-19']
 ---

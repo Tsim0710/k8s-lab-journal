@@ -1,6 +1,5 @@
 ---
 title: Алертов нет — а мониторинг вообще живой?
-kind: situation
 checked: '2026-11-10'
 journal: ['2026-11-10']
 ---
@@ -17,7 +16,7 @@ journal: ['2026-11-10']
    Alertmanager или нода `k8s-w2`, где они живут
 2. **Видит ли:** в Grafana → Explore `count by (job) (up == 1)` — должны быть все job'ы. Пусто при
    живых целях (Status → Targets) — данные не пишутся, см.
-   [Prometheus не пишет данные](prometheus-no-data.html)
+   [Prometheus не пишет данные](../runbooks/prometheus-no-data.html)
 3. **Свежие ли:** любой график за последние 15 минут — есть ли точки
 4. **Доходят ли сообщения:** `amtool alert add` с тестовым алертом — придёт ли в Telegram
 

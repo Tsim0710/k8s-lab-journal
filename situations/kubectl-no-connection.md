@@ -1,6 +1,5 @@
 ---
 title: kubectl не подключается к кластеру
-kind: situation
 checked: '2026-11-02'
 journal: ['2026-10-19', '2026-11-02']
 ---
