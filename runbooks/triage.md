@@ -1,6 +1,6 @@
 ---
 title: Порядок разбора любого алерта
-alerts: [AlertmanagerClusterFailedPeers, KubeJobNotCompleted, NodeBondingDegraded, NodeSystemdServiceCrashlooping, NodeSystemdServiceFailed, PrometheusOperatorStatusUpdateErrors, PrometheusHighQueryLoad, PrometheusKubernetesListWatchFailures, PrometheusScrapeBodySizeLimitHit, PrometheusScrapeSampleLimitHit, PrometheusSDRefreshFailure]
+alerts: [AlertmanagerClusterFailedPeers, NodeBondingDegraded, NodeSystemdServiceCrashlooping, NodeSystemdServiceFailed, PrometheusOperatorStatusUpdateErrors, PrometheusHighQueryLoad, PrometheusKubernetesListWatchFailures, PrometheusScrapeBodySizeLimitHit, PrometheusScrapeSampleLimitHit, PrometheusSDRefreshFailure]
 ---
 
 Сюда ведут алерты, для которых нет своей страницы. Порядок одинаковый для любого.

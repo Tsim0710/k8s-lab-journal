@@ -1,12 +1,16 @@
 ---
 title: Кончается диск
-alerts: [NodeFilesystemSpaceFillingUp, NodeFilesystemAlmostOutOfSpace, KubePersistentVolumeInodesFillingUp]
+alerts: [NodeDiskNearEviction, NodeFilesystemSpaceFillingUp, NodeFilesystemAlmostOutOfSpace, KubePersistentVolumeInodesFillingUp]
 ---
 
 ## Простыми словами
 
 На диске ноды кончается место (или inode'ы). У нас тома local-path — это каталоги на том же диске
 ноды, поэтому этот алерт касается и баз, Prometheus и Loki: отдельных метрик на том у local-path нет.
+
+При 10% свободного kubelet начинает сам удалять образы и выселять поды — поэтому
+`NodeDiskNearEviction` срабатывает раньше, на 15%. `NodeFilesystemAlmostOutOfSpace` (меньше 5%) на
+воркере может не прийти никогда: kubelet не даёт опуститься так низко надолго.
 
 ## Чем грозит
 
@@ -30,3 +34,9 @@ alerts: [NodeFilesystemSpaceFillingUp, NodeFilesystemAlmostOutOfSpace, KubePersi
 ## Когда звать на помощь
 
 Меньше 5% и растёт — сначала остановить источник записи, потом разбираться: при 0% базы портят данные.
+
+## Было у нас
+
+16.11, день поломок: на `k8s-w3` осталось 4%. kubelet удалил все образы и выселял поды, свободное место
+прыгало между 4 и 16%, ни один готовый алерт так и не дошёл до Telegram. Правило
+`NodeDiskNearEviction` написано по итогам.

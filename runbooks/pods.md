@@ -1,6 +1,6 @@
 ---
 title: Поды падают или не готовы
-alerts: [KubePodCrashLooping, KubePodNotReady, KubeDeploymentReplicasMismatch, KubeDeploymentRolloutStuck, KubePdbNotEnoughHealthyPods]
+alerts: [KubePodCrashLooping, KubePodNotReady, KubeDeploymentReplicasMismatch, KubeDeploymentRolloutStuck, KubePdbNotEnoughHealthyPods, KubeJobFailed, KubeJobNotCompleted]
 ---
 
 ## Простыми словами
@@ -23,6 +23,11 @@ alerts: [KubePodCrashLooping, KubePodNotReady, KubeDeploymentReplicasMismatch, K
    affinity` (том на другой ноде), taint
 5. Выкатка: `kubectl -n <ns> rollout status deploy/<имя>`, `rollout history`
 
+**Job упал** (`KubeJobFailed`): `kubectl -n <ns> get jobs`, `kubectl -n <ns> describe job <имя>`, логи
+— `kubectl -n <ns> logs job/<имя> -c <контейнер>` (у Job с init-контейнером смотреть оба). Упавший
+Job висит и держит алерт, пока его не удалить: после починки — `kubectl -n <ns> delete job <имя>`.
+Если это бэкап — [снимок etcd не делается](backups.html).
+
 ## Как починить
 
 - `OOMKilled` — поднять `limits.memory` в values
@@ -35,6 +40,12 @@ alerts: [KubePodCrashLooping, KubePodNotReady, KubeDeploymentReplicasMismatch, K
 Падают все реплики сервиса и логи ничего не говорят — откатить последнее изменение.
 
 ## Было у нас
+
+16.11, день поломок: Deployment, падающий через 5 секунд после старта. Первыми пришли «реплик
+меньше» и «под не готов» — через 17 минут, `KubePodCrashLooping` — через 22: он отсчитывает свои 15
+минут от первого CrashLoopBackOff, а второе сообщение в ту же группу ждёт до 5 минут. Сломанный
+бэкап — `KubeJobFailed` через 16.5 минуты.
+
 
 Prometheus внутри OTel Demo падает по памяти на лимите 400Mi — три алерта на одну причину, до починки
 заглушён silence ([10.11.2026](../journal/2026-11-10.html)).
