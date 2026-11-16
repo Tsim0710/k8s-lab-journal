@@ -51,7 +51,9 @@ def load_journal() -> list[dict]:
 
 def load_runbooks() -> list[dict]:
     """runbooks/<slug>.md: заголовок --- title, alerts ---, дальше markdown.
-    Ссылка из алерта — runbooks/<slug>.html, поэтому slug меняется только вместе с runbook_url."""
+    Ссылка из алерта — runbooks/<slug>.html, поэтому slug меняется только вместе с runbook_url.
+    kind: situation — страница по симптому, без алертов: checked — дата, когда прожили руками,
+    journal — записи журнала с этой историей."""
     books = []
     for path in sorted((ROOT / "runbooks").glob("*.md")):
         text = path.read_text(encoding="utf-8")
@@ -60,7 +62,10 @@ def load_runbooks() -> list[dict]:
             raise SystemExit(f"runbooks/{path.name}: нет заголовка --- title/alerts ---")
         meta = yaml.safe_load(m.group(1)) or {}
         books.append({"slug": path.stem, "title": meta.get("title", path.stem),
-                      "alerts": [str(a) for a in meta.get("alerts", [])], "body": m.group(2)})
+                      "kind": meta.get("kind", "alert"),
+                      "alerts": [str(a) for a in meta.get("alerts", [])],
+                      "checked": str(meta["checked"]) if meta.get("checked") else "",
+                      "journal": [str(j) for j in meta.get("journal", [])], "body": m.group(2)})
     return books
 
 
@@ -69,8 +74,12 @@ def validate_runbooks(books: list[dict]) -> list[str]:
     for b in books:
         if not re.fullmatch(r"[a-z0-9-]+", b["slug"]):
             errors.append(f"runbooks/{b['slug']}.md: имя файла — строчные буквы, цифры и дефис")
-        if not b["alerts"]:
+        if b["kind"] not in ("alert", "situation"):
+            errors.append(f"runbooks/{b['slug']}.md: kind — alert или situation")
+        if b["kind"] == "alert" and not b["alerts"]:
             errors.append(f"runbooks/{b['slug']}.md: пустой список alerts")
+        if b["kind"] == "situation" and b["alerts"]:
+            errors.append(f"runbooks/{b['slug']}.md: у ситуации нет alerts — это страница по симптому")
         for a in b["alerts"]:
             if a in seen:
                 errors.append(f"алерт {a} описан и в {seen[a]}, и в {b['slug']}")
@@ -269,11 +278,16 @@ def build_entry(e: dict, rm: dict) -> str:
 
 def build_runbook(b: dict) -> str:
     md = markdown.markdown(b["body"], extensions=["tables", "fenced_code", "sane_lists"])
-    chips = "".join(f'<span class="chip mono">{esc(a)}</span>' for a in b["alerts"])
+    if b["kind"] == "situation":
+        checked = f"проверено руками {ddmm(b['checked'])}" if b["checked"] else "не проверено руками"
+        chips = f'<span class="chip">{checked}</span>' + "".join(
+            f'<a class="chip mono" href="../journal/{esc(j)}.html">журнал {ddmm(j)}</a>' for j in b["journal"])
+    else:
+        chips = "".join(f'<span class="chip mono">{esc(a)}</span>' for a in b["alerts"])
     body = f'''
 <nav class="back"><a href="index.html">← все runbook'и</a></nav>
 <article class="entry">
-  <div class="label">runbook</div>
+  <div class="label">{"ситуация" if b["kind"] == "situation" else "runbook"}</div>
   <h1>{esc(b["title"])}</h1>
   <div class="chips">{chips}</div>
   <div class="md">{md}</div>
@@ -282,14 +296,23 @@ def build_runbook(b: dict) -> str:
 
 
 def build_runbooks_index(books: list[dict]) -> str:
+    situations = "".join(
+        f'<li><a href="{esc(b["slug"])}.html">{esc(b["title"])}</a>'
+        f'<div class="note">{"проверено руками " + ddmm(b["checked"]) if b["checked"] else "не проверено руками"}</div></li>'
+        for b in books if b["kind"] == "situation")
     rows = "".join(
         f'<li><a href="{esc(b["slug"])}.html">{esc(b["title"])}</a>'
-        f'<div class="note mono">{esc(", ".join(b["alerts"]))}</div></li>' for b in books)
+        f'<div class="note mono">{esc(", ".join(b["alerts"]))}</div></li>' for b in books if b["kind"] == "alert")
     body = f'''
 <nav class="back"><a href="../index.html">← маршрут</a></nav>
 <article class="entry">
   <div class="label">runbook'и</div>
-  <h1>Что делать, когда пришёл алерт</h1>
+  <h1>Что делать, когда что-то сломалось</h1>
+  <h2>Ситуации</h2>
+  <p>По симптому, когда алерта может и не быть. «Проверено руками» — прожито в лабе, дата ведёт в
+  журнал.</p>
+  <ul class="runbooks">{situations}</ul>
+  <h2>По алертам</h2>
   <p>Сюда ведут ссылки runbook из сообщений в Telegram. Под каждым заголовком — алерты, которые
   ведут на эту страницу. Алерта нет в списке — начинай с «Порядка разбора».</p>
   <ul class="runbooks">{rows}</ul>
