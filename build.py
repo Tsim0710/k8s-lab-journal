@@ -5,7 +5,8 @@
   python build.py              проверка + сборка site/ (главная, по странице на запись, план повторения)
 
 Источник правды — roadmap.yaml (план и статусы), journal/<дата>.md (записи по дням)
-и review.yaml (план повторения конспектов).
+и review.yaml (план повторения конспектов), runbooks/<slug>.md — runbook'и, на них ведут
+ссылки runbook_url из алертов.
 """
 
 import argparse
@@ -46,6 +47,35 @@ def load_journal() -> list[dict]:
         entries.append({"date": path.stem, "title": meta.get("title", path.stem),
                         "steps": [str(s) for s in meta.get("steps", [])], "body": m.group(2)})
     return entries
+
+
+def load_runbooks() -> list[dict]:
+    """runbooks/<slug>.md: заголовок --- title, alerts ---, дальше markdown.
+    Ссылка из алерта — runbooks/<slug>.html, поэтому slug меняется только вместе с runbook_url."""
+    books = []
+    for path in sorted((ROOT / "runbooks").glob("*.md")):
+        text = path.read_text(encoding="utf-8")
+        m = re.match(r"^---\n(.*?)\n---\n(.*)$", text, re.S)
+        if not m:
+            raise SystemExit(f"runbooks/{path.name}: нет заголовка --- title/alerts ---")
+        meta = yaml.safe_load(m.group(1)) or {}
+        books.append({"slug": path.stem, "title": meta.get("title", path.stem),
+                      "alerts": [str(a) for a in meta.get("alerts", [])], "body": m.group(2)})
+    return books
+
+
+def validate_runbooks(books: list[dict]) -> list[str]:
+    errors, seen = [], {}
+    for b in books:
+        if not re.fullmatch(r"[a-z0-9-]+", b["slug"]):
+            errors.append(f"runbooks/{b['slug']}.md: имя файла — строчные буквы, цифры и дефис")
+        if not b["alerts"]:
+            errors.append(f"runbooks/{b['slug']}.md: пустой список alerts")
+        for a in b["alerts"]:
+            if a in seen:
+                errors.append(f"алерт {a} описан и в {seen[a]}, и в {b['slug']}")
+            seen[a] = b["slug"]
+    return errors
 
 
 def load_review() -> dict:
@@ -217,7 +247,8 @@ def build_index(rm: dict, journal: list[dict]) -> str:
                f'{dt.datetime.now(dt.timezone.utc):%d.%m.%Y %H:%M} UTC · '
                '<a href="https://github.com/Tsim0710/k8s-lab-journal">исходники</a> · '
                '<a href="https://tsim0710.github.io/devops-anki/">карточки devops-anki</a> · '
-               '<a href="review.html">план повторения</a></footer>')
+               '<a href="review.html">план повторения</a> · '
+               '<a href="runbooks/index.html">runbook\'и</a></footer>')
     return page("Маршрут k8s-лаба", "\n".join(out))
 
 
@@ -234,6 +265,36 @@ def build_entry(e: dict, rm: dict) -> str:
   <div class="md">{md}</div>
 </article>'''
     return page(e["title"], body, "../")
+
+
+def build_runbook(b: dict) -> str:
+    md = markdown.markdown(b["body"], extensions=["tables", "fenced_code", "sane_lists"])
+    chips = "".join(f'<span class="chip mono">{esc(a)}</span>' for a in b["alerts"])
+    body = f'''
+<nav class="back"><a href="index.html">← все runbook'и</a></nav>
+<article class="entry">
+  <div class="label">runbook</div>
+  <h1>{esc(b["title"])}</h1>
+  <div class="chips">{chips}</div>
+  <div class="md">{md}</div>
+</article>'''
+    return page(b["title"], body, "../")
+
+
+def build_runbooks_index(books: list[dict]) -> str:
+    rows = "".join(
+        f'<li><a href="{esc(b["slug"])}.html">{esc(b["title"])}</a>'
+        f'<div class="note mono">{esc(", ".join(b["alerts"]))}</div></li>' for b in books)
+    body = f'''
+<nav class="back"><a href="../index.html">← маршрут</a></nav>
+<article class="entry">
+  <div class="label">runbook'и</div>
+  <h1>Что делать, когда пришёл алерт</h1>
+  <p>Сюда ведут ссылки runbook из сообщений в Telegram. Под каждым заголовком — алерты, которые
+  ведут на эту страницу. Алерта нет в списке — начинай с «Порядка разбора».</p>
+  <ul class="runbooks">{rows}</ul>
+</article>'''
+    return page("Runbook'и", body, "../")
 
 
 def src_rows(t: dict) -> str:
@@ -345,13 +406,14 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--validate", action="store_true")
     args = ap.parse_args()
-    rm, journal, rv = load_roadmap(), load_journal(), load_review()
-    errors = validate(rm, journal) + validate_review(rv)
+    rm, journal, rv, books = load_roadmap(), load_journal(), load_review(), load_runbooks()
+    errors = validate(rm, journal) + validate_review(rv) + validate_runbooks(books)
     if errors:
         print("\n".join("  ✗ " + e for e in errors))
         return 1
     n = sum(len(b["steps"]) for b in rm["blocks"])
-    print(f"ok: {len(rm['blocks'])} блоков, {n} шагов, {len(journal)} записей журнала, {len(rv['topics'])} тем повторения")
+    print(f"ok: {len(rm['blocks'])} блоков, {n} шагов, {len(journal)} записей журнала, "
+          f"{len(rv['topics'])} тем повторения, {len(books)} runbook'ов")
     if args.validate:
         return 0
     (SITE / "journal").mkdir(parents=True, exist_ok=True)
@@ -359,8 +421,12 @@ def main() -> int:
     for e in journal:
         (SITE / "journal" / f"{e['date']}.html").write_text(build_entry(e, rm), encoding="utf-8")
     (SITE / "review.html").write_text(build_review(rv), encoding="utf-8")
+    (SITE / "runbooks").mkdir(parents=True, exist_ok=True)
+    (SITE / "runbooks" / "index.html").write_text(build_runbooks_index(books), encoding="utf-8")
+    for b in books:
+        (SITE / "runbooks" / f"{b['slug']}.html").write_text(build_runbook(b), encoding="utf-8")
     (SITE / ".nojekyll").write_text("")
-    print(f"собрано: site/index.html + {len(journal)} страниц журнала + site/review.html")
+    print(f"собрано: site/index.html + {len(journal)} страниц журнала + site/review.html + {len(books)} runbook'ов")
     return 0
 
 
