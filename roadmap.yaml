@@ -6,7 +6,7 @@
 trial_end: '2026-12-27'
 today:
   date: '2026-11-17'
-  focus: 'Закрыты 2-6 (дашборд «Обзор лаба» кодом) и 2-8 (логи на Fluent Bit: потери 23% строк найдены и закрыты, хранение неделя, логи kubelet). Следующий — 2-9, алерты по логам'
+  focus: 'Закрыты 2-6 (дашборд «Обзор лаба» кодом), 2-8 (логи на Fluent Bit: потери 23% строк найдены и закрыты) и 2-9 (алерты по логам через ruler Loki) — блок 2 закрыт. Следующий — 3-1, свой сервис на Go'
   steps:
   - 2-6
   - 2-8
@@ -169,7 +169,9 @@ blocks:
   - id: 2-9
     title: Алерты по логам в Loki
     hours: 2
-    status: now
+    status: done
+    done: '2026-11-17'
+    journal: '2026-11-17'
     note: всплеск ошибок, конкретные паттерны; ruler Loki → Alertmanager → Telegram
 - id: b3
   num: '3'
@@ -184,7 +186,7 @@ blocks:
   - id: 3-1
     title: 'Сервис на Go с Postgres: health, metrics, трейсы, логи'
     hours: 6
-    status: todo
+    status: now
     note: >-
       маленький API; /healthz, /readyz, /metrics, OTLP, структурные логи; Dockerfile multi-stage, distroless,
       не root — размер образа до и после
