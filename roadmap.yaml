@@ -6,10 +6,10 @@
 trial_end: '2026-12-27'
 today:
   date: '2026-11-18'
-  focus: 'Блок 3 — свой сервис и CI/CD. Сегодня 3-1: маленький API на Go с Postgres — health, метрики, трейсы, структурные логи, образ distroless'
+  focus: 'Закрыт 3-1: свой сервис notes на Go с Postgres — пробы, метрики, трейсы, JSON-логи, образ 8.76 МБ вместо 1.9 ГБ. Следующий — 3-2, CI на pull request'
   steps:
   - 3-1
-  note: "Открыто после 2-5 и 2-9: inhibit по ноде, klog без уровня, отбросы Loki после lab-up"
+  note: "Открыто: inhibit по ноде, klog без уровня, отбросы Loki после lab-up; /readyz при исчерпании пула — в 3-5"
 blocks:
 - id: b1
   num: '1'
@@ -184,14 +184,16 @@ blocks:
   - id: 3-1
     title: 'Сервис на Go с Postgres: health, metrics, трейсы, логи'
     hours: 6
-    status: now
+    status: done
+    done: '2026-11-18'
+    journal: '2026-11-18'
     note: >-
       маленький API; /healthz, /readyz, /metrics, OTLP, структурные логи; Dockerfile multi-stage, distroless,
       не root — размер образа до и после
   - id: 3-2
     title: 'CI на pull request: lint, тесты с Postgres, сборка, Trivy'
     hours: 3
-    status: todo
+    status: now
     note: GitHub Actions, Postgres как service container
   - id: 3-3
     title: 'CD: GHCR → тег в gitops → ArgoCD, stage и prod'
