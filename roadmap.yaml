@@ -6,10 +6,11 @@
 trial_end: '2026-12-27'
 today:
   date: '2026-11-19'
-  focus: 'Закрыт 3-2: CI на pull request — линтер, тесты на Postgres, сборка образа, Trivy; ворота проверены провокацией. Следующий — 3-3, CD через GHCR и gitops'
+  focus: 'Закрыты 3-2 и 3-3: CI на pull request с Trivy и выкатка через gitops — образ из CI в реестр, тег в overlay stage, в prod кнопкой promote, откат проверен. Следующий — 3-4, миграции базы'
   steps:
   - 3-2
-  note: "Открыто: кэш компиляции Go в сборке образа, inhibit по ноде, klog без уровня, отбросы Loki после lab-up; /readyz при исчерпании пула — в 3-5"
+  - 3-3
+  note: "Открыто: отозвать push-токен реестра на маке, кэш компиляции Go в сборке образа, inhibit по ноде, klog без уровня, отбросы Loki после lab-up; /readyz при исчерпании пула — в 3-5"
 blocks:
 - id: b1
   num: '1'
@@ -200,12 +201,14 @@ blocks:
   - id: 3-3
     title: 'CD: GHCR → тег в gitops → ArgoCD, stage и prod'
     hours: 4
-    status: now
+    status: done
+    done: '2026-11-19'
+    journal: '2026-11-19'
     note: образ по SHA, коммит тега в k8s-lab-gitops, промоут stage → prod
   - id: 3-4
     title: Миграции базы отдельным шагом
     hours: 3
-    status: todo
+    status: now
     note: Job / PreSync hook, обратимые миграции
   - id: 3-5
     title: Пробы, ресурсы, HPA, PDB на своём сервисе
