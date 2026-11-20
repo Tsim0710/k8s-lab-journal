@@ -38,3 +38,7 @@ SyncFailed на платформенном приложении (kube-prometheus
 
 kube-prometheus-stack был вечно OutOfSync: в ServiceMonitor node-exporter API-сервер дописывал
 `action: replace` по умолчанию (16.11.2026).
+
+`ArgoAppSyncFailed` не сработал на первом провале синка у `notes-stage`: ряд счётчика провалов
+появился сразу со значением 1, и `increase()` дал 0. Пришёл только `ArgoAppOutOfSync` через 15 минут.
+Правило дополнено проверкой появления ряда, тесты — в gitops (20.11.2026).
