@@ -110,6 +110,58 @@ footer { color: var(--muted); font-size: 13px; }
 .h.next.on, .h.next.late { color: var(--now); font-weight: 500; }
 li.step.due { box-shadow: inset 3px 0 0 var(--now); }
 ol.plain { margin: 0; padding-left: 22px; display: grid; gap: 4px; max-width: 70ch; }
+
+/* план повторения: режимы, темы-раскрывашки, вопросы с ответом под спойлером */
+.howto { color: var(--muted); font-size: 13.5px; }
+.tm { font-family: var(--font-mono); font-size: 12px; color: var(--muted); margin-left: 6px; white-space: nowrap; }
+.checklist .howto { margin: 1px 0 4px 22px; }
+.fresh-box { display: grid; gap: 6px; }
+.fresh-box ul { margin: 0; padding-left: 20px; }
+.stages { display: grid; gap: 8px; }
+details.stage { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+details > summary { list-style: none; cursor: pointer; }
+details > summary::-webkit-details-marker { display: none; }
+details.stage > summary { display: flex; flex-wrap: wrap; gap: 2px 10px; align-items: baseline; padding: 10px 14px; }
+details.stage > summary .st { font-weight: 600; }
+details.stage > summary .st::before, details.topic > summary .t::before { content: "▸ "; color: var(--muted); font-weight: 400; }
+details.stage[open] > summary .st::before, details.topic[open] > summary .t::before { content: "▾ "; }
+details.stage > summary .tm { margin-left: auto; }
+.stage-body { padding: 0 16px 14px; display: grid; gap: 8px; max-width: 76ch; }
+.stage-body p { margin: 0; }
+.stage-body ol { margin: 0; padding-left: 22px; display: grid; gap: 7px; }
+.topics { border-top: 1px solid var(--line); }
+details.topic { border-bottom: 1px solid var(--line); }
+details.topic > summary { display: grid; grid-template-columns: 18px 28px minmax(0, 1fr) auto; gap: 2px 10px; align-items: start; padding: 9px 6px; }
+details.topic > summary .mark { color: var(--done); font-weight: 600; }
+details.topic.now > summary { background: var(--now-soft); border-radius: 4px; }
+details.topic.now > summary .mark { color: var(--now); }
+details.topic.due > summary { box-shadow: inset 3px 0 0 var(--now); }
+details.topic.done > summary .t { color: var(--muted); }
+details.topic > summary .num { font-family: var(--font-mono); font-size: 13px; color: var(--muted); padding-top: 1px; }
+details.topic > summary .h { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); white-space: nowrap; padding-top: 1px; }
+.area { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-left: 8px; white-space: nowrap; }
+.tbody { padding: 6px 6px 20px 62px; display: grid; gap: 16px; max-width: 82ch; }
+.brief { margin: 0; }
+.tsec h3 { font-family: var(--font-mono); font-size: 11.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 0 0 6px; }
+.tsec.srcs { display: grid; gap: 2px; }
+.reads, .lsteps { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.reads .meta { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted); margin-left: 8px; }
+.reads .note { color: var(--muted); font-size: 13.5px; }
+.lsteps .links { font-size: 13px; margin-left: 4px; white-space: nowrap; }
+.lsteps .ahead { color: var(--muted); }
+.lock { font-size: 11px; margin-left: 2px; }
+.qa { display: grid; gap: 2px; }
+.qa details { border-left: 2px solid var(--line); padding: 3px 0 3px 10px; }
+.qa details[open] { border-left-color: var(--accent); }
+.qa .ans { margin: 6px 0 4px; font-size: 14px; background: var(--code-bg); padding: 8px 11px; border-radius: 4px; }
+.tbody code, .today code, .stage-body code { font-family: var(--font-mono); font-size: 12.5px; background: var(--code-bg); padding: 1px 4px; border-radius: 3px; overflow-wrap: anywhere; }
+.qa .ans code { background: var(--surface); }
+@media (max-width: 540px) {
+  details.topic > summary { grid-template-columns: 16px 24px minmax(0, 1fr); }
+  details.topic > summary .h { grid-column: 3; padding-top: 0; }
+  .tbody { padding-left: 6px; }
+  .area { margin-left: 0; display: block; }
+}
 @media (max-width: 540px) {
   li.step { grid-template-columns: 16px 34px minmax(0, 1fr); }
   li.step .h { grid-column: 3; padding-top: 0; }

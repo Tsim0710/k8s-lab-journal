@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Сборка страницы журнала k8s-лаба.
 
-  python build.py --validate   только проверка roadmap.yaml, journal/ и review.yaml
+  python build.py --validate   только проверка roadmap.yaml, journal/, review.yaml и runbook'ов
   python build.py              проверка + сборка site/ (главная, по странице на запись, план повторения)
 
 Источник правды — roadmap.yaml (план и статусы), journal/<дата>.md (записи по дням)
@@ -89,34 +89,87 @@ def load_review() -> dict:
     return yaml.safe_load((ROOT / "review.yaml").read_text(encoding="utf-8"))
 
 
-def next_repeat(t: dict) -> dt.date | None:
-    """После первого прохода +7 дней, после чистого повтора +21, после повтора с провалами +7."""
+REVIEW_KEYS = ("start", "restart", "ladder", "private_url", "drill_url", "stages", "topics")
+TOPIC_KEYS = ("id", "title", "area", "status", "brief", "steps", "read", "questions", "lab", "gdoc", "seen", "drill")
+STAGE_KEYS = ("key", "title", "time", "when", "why", "steps")
+
+
+def clean_streak(t: dict) -> int:
+    """Сколько чистых повторов подряд в конце истории темы."""
+    n = 0
+    for r in sorted(t.get("repeats") or [], key=lambda r: str(r["date"]), reverse=True):
+        if not r.get("clean"):
+            break
+        n += 1
+    return n
+
+
+def next_repeat(t: dict, ladder: list[int]) -> dt.date | None:
+    """Лестница интервалов: после прохода ladder[0] дней, каждый чистый повтор подряд — ступенька
+    выше (дальше последней не растёт), повтор с провалами — снова ladder[0]."""
     if t["status"] != "done":
         return None
     reps = sorted(t.get("repeats") or [], key=lambda r: str(r["date"]))
     last = dt.date.fromisoformat(str(reps[-1]["date"] if reps else t["done"]))
-    return last + dt.timedelta(days=21 if reps and reps[-1].get("clean") else 7)
+    return last + dt.timedelta(days=ladder[min(clean_streak(t), len(ladder) - 1)])
 
 
-def validate_review(rv: dict) -> list[str]:
-    errors = []
-    ids = [t.get("id") for t in rv.get("topics", [])]
+def fresh_steps(rv: dict, steps: dict) -> list[dict]:
+    """Шаги лаба, закрытые с перестройки плана и ещё не закреплённые опросом."""
+    since = dt.date.fromisoformat(str(rv["restart"]))
+    done = {str(k) for k in (rv.get("consolidated") or {})}
+    return [s for s in steps.values() if s["status"] == "done" and str(s["id"]) not in done
+            and dt.date.fromisoformat(str(s["done"])) >= since]
+
+
+def validate_review(rv: dict, rm: dict, books: list[dict]) -> list[str]:
+    errors = [f"review.yaml: нет поля {k}" for k in REVIEW_KEYS if k not in rv]
+    if errors:
+        return errors
+    steps = {str(s["id"]): s for b in rm["blocks"] for s in b["steps"]}
+    pages = {f'{b["folder"]}/{b["slug"]}' for b in books}
+    ids = [t.get("id") for t in rv["topics"]]
     if len(ids) != len(set(ids)):
         errors.append("review.yaml: повторяются id тем")
-    for t in rv.get("topics", []):
-        tid = t.get("id", "?")
-        for key in ("id", "title", "gdoc", "lab", "drill", "status"):
-            if key not in t:
-                errors.append(f"review.yaml, тема {tid}: нет поля {key}")
+    mapped = set()
+    for t in rv["topics"]:
+        where = f"review.yaml, тема {t.get('id', '?')}"
+        errors += [f"{where}: нет поля {k}" for k in TOPIC_KEYS if k not in t]
         if t.get("status") not in STATUSES:
-            errors.append(f"review.yaml, тема {tid}: status должен быть одним из {sorted(STATUSES)}")
+            errors.append(f"{where}: status должен быть одним из {sorted(STATUSES)}")
         if t.get("status") == "done" and not t.get("done"):
-            errors.append(f"review.yaml, тема {tid}: пройдена, но нет даты done")
+            errors.append(f"{where}: пройдена, но нет даты done")
         for r in t.get("repeats") or []:
             if "date" not in r or "clean" not in r:
-                errors.append(f"review.yaml, тема {tid}: у повтора нужны date и clean")
-    if sum(1 for t in rv.get("topics", []) if t.get("status") == "now") > 1:
+                errors.append(f"{where}: у повтора нужны date и clean")
+        for sid in t.get("steps") or []:
+            if str(sid) not in steps:
+                errors.append(f"{where}: в roadmap.yaml нет шага {sid}")
+            mapped.add(str(sid))
+        for p in t.get("seen") or []:
+            if p not in pages:
+                errors.append(f"{where}: нет страницы {p}.md")
+        for a in t.get("read") or []:
+            if not (a.get("title") and a.get("note") and str(a.get("url", "")).startswith("https://")):
+                errors.append(f"{where}: у статьи нужны title, note и url на https")
+        for q in t.get("questions") or []:
+            if not (q.get("q") and q.get("a")):
+                errors.append(f"{where}: у вопроса нужны q и a")
+        # Тему можно начинать, только когда она наполнена: todo может быть заготовкой
+        if t.get("status") in ("now", "done") and (not t.get("brief") or len(t.get("questions") or []) < 3):
+            errors.append(f"{where}: перед проходом нужны brief и хотя бы 3 вопроса")
+    for sid, s in steps.items():
+        if s["status"] == "done" and sid not in mapped:
+            errors.append(f"review.yaml: шаг {sid} закрыт, но не входит ни в одну тему")
+    for sid in rv.get("consolidated") or {}:
+        if steps.get(str(sid), {}).get("status") != "done":
+            errors.append(f"review.yaml, consolidated: шаг {sid} не закрыт в roadmap.yaml")
+    if sum(1 for t in rv["topics"] if t.get("status") == "now") > 1:
         errors.append("review.yaml: «сейчас» больше одной темы")
+    for sg in rv["stages"]:
+        errors += [f"review.yaml, режим {sg.get('key', '?')}: нет поля {k}" for k in STAGE_KEYS if k not in sg]
+    if not {"pass", "daily"} <= {sg.get("key") for sg in rv["stages"]}:
+        errors.append("review.yaml: нужны режимы pass и daily — из них собирается «Сегодня»")
     return errors
 
 
@@ -328,108 +381,208 @@ def build_situations_index(books: list[dict]) -> str:
     return page("Ситуации", body, "../")
 
 
-def src_rows(t: dict) -> str:
-    rows = [("Google Doc", t["gdoc"]), ("Лаб", t["lab"]), ("Тренажёр", t["drill"])]
-    return "".join(f'<div class="src"><span class="src-k">{k}</span><span>{esc(" · ".join(v))}</span></div>'
-                   for k, v in rows if v)
+LAB_DOC = re.compile(r"^((?:\d\d-[a-z0-9-]+)|(?:interview/[a-z0-9-]+))(.*)$", re.S)
+LOCK = '<span class="lock" title="приватное репо: откроется, если вошёл в GitHub как Tsim0710">🔒</span>'
+
+# Сроки повторов сверяются с датой в браузере, а не со временем сборки.
+# Галочки шагов текущей темы — только удобство, живут в localStorage этого браузера.
+REVIEW_JS = """
+(function () {
+  var today = new Date(); today.setHours(0, 0, 0, 0);
+  var due = document.getElementById("due"), n = 0;
+  document.querySelectorAll("[data-next]").forEach(function (el) {
+    var d = new Date(el.dataset.next + "T00:00:00");
+    if (d > today) return;
+    var topic = el.closest("details.topic"); topic.classList.add("due");
+    el.classList.add(d < today ? "late" : "on");
+    var item = document.createElement("li"), a = document.createElement("a");
+    a.href = "#" + topic.id;
+    a.textContent = topic.querySelector(".num").textContent + " · " + topic.dataset.title;
+    item.appendChild(a);
+    if (d < today) item.appendChild(document.createTextNode(
+      " — просрочено с " + el.dataset.next.slice(8, 10) + "." + el.dataset.next.slice(5, 7)));
+    due.appendChild(item); n++;
+  });
+  if (n) document.querySelector(".due-box").hidden = false;
+  // ссылка на тему (#t-N) раскрывает её
+  function openHash() {
+    var t = location.hash && document.querySelector(location.hash);
+    if (t && t.tagName === "DETAILS") t.open = true;
+  }
+  window.addEventListener("hashchange", openHash); openHash();
+  document.querySelectorAll("input[data-key]").forEach(function (cb) {
+    try { cb.checked = localStorage.getItem(cb.dataset.key) === "1"; } catch (e) {}
+    cb.addEventListener("change", function () {
+      try { localStorage.setItem(cb.dataset.key, cb.checked ? "1" : "0"); } catch (e) {}
+    });
+  });
+})();
+"""
 
 
-def topic_row(t: dict) -> str:
+def inline(s) -> str:
+    """Экранирование плюс `код` и **жирный** — для текстов из review.yaml."""
+    out = re.sub(r"`([^`]+)`", r"<code>\1</code>", esc(s))
+    return re.sub(r"\*\*([^*]+)\*\*", r"<b>\1</b>", out)
+
+
+def lab_ref(rv: dict, item: str) -> str:
+    """«03-observability — разделы …» → ссылка на приватный конспект, остальное — текстом."""
+    m = LAB_DOC.match(item)
+    if not m:
+        return inline(item)
+    return (f'<a class="mono" href="{esc(rv["private_url"])}{esc(m.group(1))}.md">{esc(m.group(1))}</a>'
+            f'{LOCK}{inline(m.group(2))}')
+
+
+def src_row(key: str, items: list[str]) -> str:
+    if not items:
+        return ""
+    return f'<div class="src"><span class="src-k">{key}</span><span>{" · ".join(items)}</span></div>'
+
+
+def tm(x: dict) -> str:
+    return f' <span class="tm">{esc(x["time"])}</span>' if x.get("time") else ""
+
+
+def step_item(sid: str, steps: dict, rv: dict) -> str:
+    s = steps[sid]
+    if s["status"] != "done":
+        return (f'<li class="ahead"><span class="mono">{esc(sid)}</span> {esc(s["title"])} '
+                f'<span class="muted">— впереди в лабе</span></li>')
+    links = [f'<a href="journal/{esc(s["journal"])}.html">журнал</a>'] if s.get("journal") else []
+    links.append(f'<a href="{esc(rv["private_url"])}steps/{esc(sid)}.md">итог шага</a>{LOCK}')
+    return (f'<li><span class="mono">{esc(sid)}</span> {esc(s["title"])} '
+            f'<span class="links">{" · ".join(links)}</span></li>')
+
+
+def topic_block(t: dict, rv: dict, steps: dict, titles: dict) -> str:
     st = t["status"]
-    nxt = next_repeat(t)
+    nxt = next_repeat(t, rv["ladder"])
     pill = ""
     if st == "now":
         pill = '<span class="pill now">сейчас</span>'
     elif st == "done":
-        reps = t.get("repeats") or []
         pill = f'<span class="pill done">пройдено {ddmm(t["done"])}</span>'
-        if reps:
-            pill += f'<span class="pill rep">повторов: {len(reps)}</span>'
-    why = f' <span class="muted">— {esc(t["why"])}</span>' if t.get("why") else ""
-    weak = ""
-    if t.get("weak"):
-        weak = '<div class="weak"><span class="src-k">Провисло</span><span>' + esc("; ".join(t["weak"])) + "</span></div>"
-    when = f'<span class="h next" data-next="{nxt.isoformat()}">повтор {ddmm(nxt.isoformat())}</span>' if nxt else '<span class="h"></span>'
+        if t.get("repeats"):
+            pill += f'<span class="pill rep">повторов: {len(t["repeats"])}</span>'
+    when = (f'<span class="h next" data-next="{nxt.isoformat()}">повтор {ddmm(nxt.isoformat())}</span>'
+            if nxt else '<span class="h"></span>')
     mark = {"done": "✓", "now": "▸", "todo": ""}[st]
-    return (f'<li class="step {st}" data-title="{esc(t["title"])}"><span class="mark" aria-hidden="true">{mark}</span>'
-            f'<span class="num">{esc(t["id"])}</span>'
-            f'<div class="title"><span class="t">{esc(t["title"])}</span>{why}{pill}{src_rows(t)}{weak}</div>'
-            f'{when}</li>')
+
+    parts = [f'<p class="brief">{inline(t["brief"])}</p>' if t.get("brief")
+             else '<p class="brief muted">Тема ещё не наполнена.</p>']
+    if t.get("weak"):
+        parts.append(f'<div class="weak"><span class="src-k">Провисло</span><span>{inline("; ".join(t["weak"]))}</span></div>')
+    if t.get("questions"):
+        qa = "".join(f'<details><summary>{inline(q["q"])}</summary><div class="ans">{inline(q["a"])}</div></details>'
+                     for q in t["questions"])
+        parts.append(f'<div class="tsec"><h3>Проверь себя · {len(t["questions"])}</h3><div class="qa">{qa}</div></div>')
+    if t.get("read"):
+        reads = "".join(
+            f'<li><a href="{esc(a["url"])}">{esc(a["title"])}</a>'
+            f'<span class="meta">{esc(a.get("lang", "en"))}{" · ~" + str(a["min"]) + " мин" if a.get("min") else ""}</span>'
+            f'<div class="note">{inline(a["note"])}</div></li>' for a in t["read"])
+        parts.append(f'<div class="tsec"><h3>Основа</h3><ul class="reads">{reads}</ul></div>')
+    if t.get("steps"):
+        items = "".join(step_item(str(sid), steps, rv) for sid in t["steps"])
+        parts.append(f'<div class="tsec"><h3>Шаги лаба</h3><ul class="lsteps">{items}</ul></div>')
+    seen = t.get("seen") or []
+    srcs = (src_row("Ситуации", [f'<a href="{esc(p)}.html">{esc(titles[p])}</a>' for p in seen if p.startswith("situations/")])
+            + src_row("Runbook'и", [f'<a href="{esc(p)}.html">{esc(titles[p])}</a>' for p in seen if p.startswith("runbooks/")])
+            + src_row("Конспекты", [lab_ref(rv, x) for x in t.get("lab") or []])
+            + src_row("Теория", [inline(x) for x in t.get("gdoc") or []])
+            + src_row("Тренажёр", [inline(x) for x in t.get("drill") or []]))
+    if srcs:
+        parts.append(f'<div class="tsec srcs">{srcs}</div>')
+    return (f'<details class="topic {st}" id="t-{esc(t["id"])}" data-title="{esc(t["title"])}"{" open" if st == "now" else ""}>'
+            f'<summary><span class="mark" aria-hidden="true">{mark}</span><span class="num">{esc(t["id"])}</span>'
+            f'<span class="title"><span class="t">{esc(t["title"])}</span><span class="area">{esc(t["area"])}</span>{pill}</span>'
+            f'{when}</summary><div class="tbody">{"".join(parts)}</div></details>')
 
 
-def build_review(rv: dict) -> str:
+def stage_block(sg: dict) -> str:
+    items = "".join(f'<li><b>{esc(x["name"])}</b>{tm(x)}<div class="howto">{inline(x["how"])}</div></li>'
+                    for x in sg["steps"])
+    return (f'<details class="stage" id="m-{esc(sg["key"])}"><summary><span class="st">{esc(sg["title"])}</span>'
+            f'<span class="tm">{esc(sg["time"])}</span></summary>'
+            f'<div class="stage-body"><div class="stage-when">{inline(sg["when"])}</div>'
+            f'<p class="muted">{inline(sg["why"])}</p><ol>{items}</ol></div></details>')
+
+
+def build_review(rv: dict, rm: dict, books: list[dict]) -> str:
     topics = rv["topics"]
+    steps = {str(s["id"]): s for b in rm["blocks"] for s in b["steps"]}
+    titles = {f'{b["folder"]}/{b["slug"]}': b["title"] for b in books}
+    stages = {sg["key"]: sg for sg in rv["stages"]}
+    topic_of = {}
+    for t in topics:
+        for sid in t["steps"]:
+            topic_of.setdefault(str(sid), t)
     done = sum(1 for t in topics if t["status"] == "done")
     reps = sum(len(t.get("repeats") or []) for t in topics)
     pct = round(done / len(topics) * 100) if topics else 0
+    fresh = fresh_steps(rv, steps)
+
     cur = next((t for t in topics if t["status"] == "now"), None)
-    steps = "".join(f'<li><label><input type="checkbox" data-key="review-{esc(cur["id"]) if cur else 0}-{i}"> {esc(m)}</label></li>'
-                    for i, m in enumerate(rv["method"]))
-    cur_html = ""
     if cur:
-        cur_html = f'''
-  <div class="focus">Тема {esc(cur["id"])} · {esc(cur["title"])}</div>
-  {src_rows(cur)}
-  <ol class="checklist">{steps}</ol>'''
+        p = stages["pass"]
+        checklist = "".join(
+            f'<li><label><input type="checkbox" data-key="rv2-{esc(cur["id"])}-{i}"> <b>{esc(x["name"])}</b></label>{tm(x)}'
+            f'<div class="howto">{inline(x["how"])}</div></li>' for i, x in enumerate(p["steps"]))
+        cur_html = (f'<div class="focus"><a href="#t-{esc(cur["id"])}">Тема {esc(cur["id"])} · {esc(cur["title"])}</a></div>'
+                    f'<div class="muted"><a href="#m-pass">{esc(p["title"])}</a> · {esc(p["time"])}</div>'
+                    f'<ol class="checklist">{checklist}</ol>')
     else:
         cur_html = '<div class="focus">Первый проход закончен — дальше только повторы</div>'
-    rows = "".join(topic_row(t) for t in topics)
-    prep = "".join(f"<li>{esc(x)}</li>" for x in rv["before_interview"])
+    fresh_html = ""
+    if fresh:
+        items = "".join(f'<li><span class="mono">{esc(s["id"])}</span> {esc(s["title"])} — '
+                        f'<a href="#t-{esc(topic_of[str(s["id"])]["id"])}">тема {esc(topic_of[str(s["id"])]["id"])}</a></li>'
+                        for s in fresh)
+        fresh_html = (f'<div class="fresh-box"><div class="label"><a href="#m-fresh">Свежие шаги лаба</a> — '
+                      f'закрепить на опросе</div><ul>{items}</ul></div>')
+    daily = stages["daily"]
+
     body = f'''
 <nav class="back"><a href="index.html">← маршрут</a></nav>
 <header class="top">
   <div class="head-row"><h1>План повторения</h1>
-    <div class="label">Google-конспекты · конспекты лаба · devops-anki</div></div>
-  <p class="lead">Первый проход — одна тема в день, около 70 минут, утром до лаба. Каждая тема собрана из трёх
-  источников: теория в Google-конспекте, то же самое руками в лабе, проверка в
-  <a href="{esc(rv["drill_url"])}">тренажёре</a>. Повторы приходят сами: через неделю, потом через три.</p>
+    <div class="label">шаги лаба · статьи · конспекты · devops-anki</div></div>
+  <p class="lead">Лаб — это руки, здесь — закрепление. В каждой теме: что это простыми словами, вопросы для
+  самопроверки, базовая статья, свои шаги лаба и теория. Первый проход — по теме за сессию, дальше повторы
+  приходят сами: через неделю, через три, через шесть. Свежий шаг лаба закрепляется опросом в начале
+  следующей лаб-сессии.</p>
   <div class="stats">
     <div><span class="muted">тем пройдено</span> <b>{done} из {len(topics)}</b></div>
-    <div><span class="muted">повторов сделано</span> <b>{reps}</b></div>
+    <div><span class="muted">повторов</span> <b>{reps}</b></div>
+    <div><span class="muted">свежих шагов ждут опроса</span> <b>{len(fresh)}</b></div>
     <div><span class="muted">начало</span> <b>{ddmm(rv["start"])}</b></div>
   </div>
   <div class="bar" aria-hidden="true"><i style="width:{pct}%"></i></div>
 </header>
 <section class="today" aria-labelledby="rt-h">
   <div class="label" id="rt-h">Сегодня</div>{cur_html}
-  <div class="due-box" hidden><div class="label">Повторить сегодня</div><ul id="due"></ul></div>
-  <div class="note">{esc(rv["daily"])}</div>
+  <div class="due-box" hidden><div class="label"><a href="#m-repeat">Повторить по сроку</a></div><ul id="due"></ul></div>{fresh_html}
+  <div class="note"><a href="#m-daily">{esc(daily["title"])}</a>, {esc(daily["time"])}: {inline(daily["steps"][0]["how"])}</div>
+</section>
+<section class="block" aria-labelledby="rs-h">
+  <div class="block-head"><span class="block-num mono">{len(rv["stages"])}</span><h2 id="rs-h">Как повторять</h2>
+    <span class="block-meta mono">режимы</span>
+    <div class="why">Нажми на режим — внутри по шагам: что делать, сколько времени и зачем.</div></div>
+  <div class="stages">{"".join(stage_block(sg) for sg in rv["stages"])}</div>
 </section>
 <section class="block" aria-labelledby="rl-h">
-  <div class="block-head"><span class="block-num mono">15</span><h2 id="rl-h">Темы</h2>
-    <span class="block-meta mono">{done}/{len(topics)}</span></div>
-  <ul class="steps">{rows}</ul>
+  <div class="block-head"><span class="block-num mono">{len(topics)}</span><h2 id="rl-h">Темы</h2>
+    <span class="block-meta mono">{done}/{len(topics)}</span>
+    <div class="why">В порядке первого прохода. Нажми на тему — внутри всё для неё. {LOCK} — приватные конспекты
+    лаба: откроются, если вошёл в GitHub как Tsim0710.</div></div>
+  <div class="topics">{"".join(topic_block(t, rv, steps, titles) for t in topics)}</div>
 </section>
-<section class="block" aria-labelledby="ri-h">
-  <h2 id="ri-h">Перед собесом, за 1–2 дня</h2>
-  <ol class="plain">{prep}</ol>
-</section>
-<footer>Собрано из <span class="mono">review.yaml</span> · {dt.datetime.now(dt.timezone.utc):%d.%m.%Y %H:%M} UTC ·
-план с объяснением порядка — <span class="mono">k8s-lab-infra/docs/interview/review-plan.md</span></footer>
-<script>
-// Сроки повторов сверяются с датой в браузере, а не со временем сборки.
-// Галочки шагов текущей темы — только удобство, живут в localStorage этого браузера.
-(function () {{
-  var today = new Date(); today.setHours(0, 0, 0, 0);
-  var due = document.getElementById("due"), n = 0;
-  document.querySelectorAll("[data-next]").forEach(function (el) {{
-    var d = new Date(el.dataset.next + "T00:00:00");
-    if (d > today) return;
-    var li = el.closest("li.step"); li.classList.add("due");
-    el.classList.add(d < today ? "late" : "on");
-    var item = document.createElement("li");
-    item.textContent = li.querySelector(".num").textContent + " · " + li.dataset.title + (d < today ? " — просрочено" : "");
-    due.appendChild(item); n++;
-  }});
-  if (n) document.querySelector(".due-box").hidden = false;
-  document.querySelectorAll("input[data-key]").forEach(function (cb) {{
-    try {{ cb.checked = localStorage.getItem(cb.dataset.key) === "1"; }} catch (e) {{}}
-    cb.addEventListener("change", function () {{
-      try {{ localStorage.setItem(cb.dataset.key, cb.checked ? "1" : "0"); }} catch (e) {{}}
-    }});
-  }});
-}})();
-</script>'''
+<footer>Собрано из <span class="mono">review.yaml</span> и <span class="mono">roadmap.yaml</span> ·
+{dt.datetime.now(dt.timezone.utc):%d.%m.%Y %H:%M} UTC · как вести — CLAUDE.md журнала, «План повторения» ·
+подробно с источниками — <a href="{esc(rv["private_url"])}interview/review-plan.md">review-plan.md</a>{LOCK}</footer>
+<script>{REVIEW_JS}</script>'''
     return page("План повторения", body, icon=REVIEW_ICON)
 
 
@@ -438,7 +591,7 @@ def main() -> int:
     ap.add_argument("--validate", action="store_true")
     args = ap.parse_args()
     rm, journal, rv, books = load_roadmap(), load_journal(), load_review(), load_runbooks()
-    errors = validate(rm, journal) + validate_review(rv) + validate_runbooks(books)
+    errors = validate(rm, journal) + validate_review(rv, rm, books) + validate_runbooks(books)
     if errors:
         print("\n".join("  ✗ " + e for e in errors))
         return 1
@@ -452,7 +605,7 @@ def main() -> int:
     (SITE / "index.html").write_text(build_index(rm, journal), encoding="utf-8")
     for e in journal:
         (SITE / "journal" / f"{e['date']}.html").write_text(build_entry(e, rm), encoding="utf-8")
-    (SITE / "review.html").write_text(build_review(rv), encoding="utf-8")
+    (SITE / "review.html").write_text(build_review(rv, rm, books), encoding="utf-8")
     for folder in ("runbooks", "situations"):
         (SITE / folder).mkdir(parents=True, exist_ok=True)
     (SITE / "runbooks" / "index.html").write_text(build_runbooks_index(books), encoding="utf-8")
