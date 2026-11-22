@@ -11,6 +11,7 @@ VM в GCP, Cilium, ArgoCD, Prometheus, Loki. Кластер поднят, теп
 |---|---|
 | План и статусы шагов | `roadmap.yaml` |
 | Записи по дням | `journal/YYYY-MM-DD.md` |
+| План повторения: темы, вопросы, статьи, сроки | `review.yaml` → [review.html](https://tsim0710.github.io/k8s-lab-journal/review.html) |
 | Шаблон страницы | `web/page.html` |
 | Сборка | `build.py`, Actions → GitHub Pages |
 
