@@ -601,7 +601,8 @@ def build_review(rv: dict, rm: dict, books: list[dict]) -> str:
   <div class="topics">{"".join(topic_block(t, rv, steps, titles) for t in topics)}</div>
 </section>
 <footer>Собрано из <span class="mono">review.yaml</span> и <span class="mono">roadmap.yaml</span> ·
-{dt.datetime.now(dt.timezone.utc):%d.%m.%Y %H:%M} UTC · как вести — CLAUDE.md журнала, «План повторения» ·
+{dt.datetime.now(dt.timezone.utc):%d.%m.%Y %H:%M} UTC ·
+<a href="https://github.com/Tsim0710/k8s-lab-journal/blob/main/AGENTS.md#план-повторения">как вести план</a> ·
 подробно с источниками — <a href="{esc(rv["private_url"])}interview/review-plan.md">review-plan.md</a>{LOCK}</footer>
 <script>{REVIEW_JS}</script>'''
     return page("План повторения", body, icon=REVIEW_ICON)
