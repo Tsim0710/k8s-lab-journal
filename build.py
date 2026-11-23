@@ -158,6 +158,8 @@ def validate_review(rv: dict, rm: dict, books: list[dict]) -> list[str]:
         # Тему можно начинать, только когда она наполнена: todo может быть заготовкой
         if t.get("status") in ("now", "done") and (not t.get("brief") or len(t.get("questions") or []) < 3):
             errors.append(f"{where}: перед проходом нужны brief и хотя бы 3 вопроса")
+        if t.get("brief") and not (isinstance(t.get("practice"), str) and t["practice"].strip()):
+            errors.append(f"{where}: наполненной теме нужно упражнение practice")
     for sid, s in steps.items():
         if s["status"] == "done" and sid not in mapped:
             errors.append(f"review.yaml: шаг {sid} закрыт, но не входит ни в одну тему")
@@ -168,6 +170,8 @@ def validate_review(rv: dict, rm: dict, books: list[dict]) -> list[str]:
         errors.append("review.yaml: «сейчас» больше одной темы")
     for sg in rv["stages"]:
         errors += [f"review.yaml, режим {sg.get('key', '?')}: нет поля {k}" for k in STAGE_KEYS if k not in sg]
+        if not sg.get("steps") or any(not (s.get("name") and s.get("how")) for s in sg["steps"]):
+            errors.append(f"review.yaml, режим {sg.get('key', '?')}: у каждого подшага нужны name и how")
     if not {"pass", "daily"} <= {sg.get("key") for sg in rv["stages"]}:
         errors.append("review.yaml: нужны режимы pass и daily — из них собирается «Сегодня»")
     return errors
@@ -474,6 +478,8 @@ def topic_block(t: dict, rv: dict, steps: dict, titles: dict) -> str:
              else '<p class="brief muted">Тема ещё не наполнена.</p>']
     if t.get("weak"):
         parts.append(f'<div class="weak"><span class="src-k">Провисло</span><span>{inline("; ".join(t["weak"]))}</span></div>')
+    if t.get("practice"):
+        parts.append(f'<div class="tsec"><h3>Упражнение</h3><p>{inline(t["practice"])}</p></div>')
     if t.get("questions"):
         qa = "".join(f'<details><summary>{inline(q["q"])}</summary><div class="ans">{inline(q["a"])}</div></details>'
                      for q in t["questions"])
