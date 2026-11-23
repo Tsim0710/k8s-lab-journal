@@ -354,7 +354,7 @@ topics:
       - title: Prometheus — Histograms and summaries
         url: https://prometheus.io/docs/practices/histograms/
         note: >-
-          Раздел Fraction of observations: найди, как из корзины получить долю запросов быстрее
+          Раздел Bucketing: найди, как из корзины получить долю запросов быстрее
           порога и как агрегировать её по репликам.
         lang: en
         min: 10
@@ -460,8 +460,8 @@ topics:
       - title: Google SRE Workbook — Alerting on SLOs
         url: https://sre.google/workbook/alerting-on-slos/
         note: >-
-          Пройди Alert on Burn Rate и Multiple Windows. Затем посмотри, как малый трафик влияет
-          на точность алерта.
+          Возьми Alert on Burn Rate и Multiwindow, Multi-Burn-Rate Alerts. Для проверки граничных
+          случаев посмотри, как малый трафик влияет на точность алерта.
         lang: en
         min: 15
     questions:
@@ -475,6 +475,8 @@ topics:
           SLI — измеренная доля хороших запросов, SLO — цель за выбранный период. При SLO 99,9%
           допустимая доля плохих — 0,1%. При 1% плохих запросов burn rate равен 10×. Длинное окно
           подтверждает значимый расход бюджета, короткое показывает, продолжается ли деградация.
+          Например, при цели 99,9% порог 14,4× означает 1,44% плохих запросов. Для пары 1 ч и 5 мин
+          условие должно выполняться в обоих окнах. Цифры для шага 3-6 ещё предстоит выбрать.
       - q: Как проверить, что метрика приложения видит то же, что и клиент?
         a: >-
           В `3-5` k6 видел отказ соединения, EOF и таймауты. Часть таких попыток не доходит до
@@ -1271,10 +1273,9 @@ topics:
       - title: Setting the right requests and limits in Kubernetes
         url: https://learnkube.com/setting-cpu-memory-limits-requests
         note: >-
-          С картинками: как requests влияют на размещение, а лимиты — на троттлинг и OOM, и откуда
-          берутся QoS-классы.
+          Посмотри примеры про размещение, троттлинг и OOM. Их хватит, чтобы сравнить requests и limits.
         lang: en
-        min: 25
+        min: 12
       - title: Horizontal Pod Autoscaling
         url: https://kubernetes.io/docs/concepts/workloads/autoscaling/horizontal-pod-autoscale/
         note: >-
@@ -1373,9 +1374,9 @@ topics:
       - title: A visual guide on troubleshooting Kubernetes deployments
         url: https://learnkube.com/troubleshooting-deployments
         note: >-
-          Блок-схема разбора снизу вверх: под → Service → Ingress, с командами на каждом шаге.
+          Начни с блок-схемы под → Service → Ingress. Выбери одну развилку по симптому из упражнения.
         lang: en
-        min: 20
+        min: 10
       - title: The USE Method — Brendan Gregg
         url: https://www.brendangregg.com/usemethod.html
         note: >-
@@ -1561,10 +1562,9 @@ topics:
       - title: The mechanics of Kubernetes RBAC
         url: https://learnkube.com/rbac-kubernetes
         note: >-
-          Как пользователи, ServiceAccount, роли и привязки складываются в доступ — с картинками. Хватит
-          первой половины.
+          Прочитай фрагмент о ролях и привязках. Проследи один запрос от пользователя или ServiceAccount.
         lang: en
-        min: 20
+        min: 12
       - title: Pod Security Standards
         url: https://kubernetes.io/docs/concepts/security/pod-security-standards/
         note: >-
@@ -1739,9 +1739,9 @@ topics:
       - title: Tracing the path of network traffic in Kubernetes
         url: https://learnkube.com/kubernetes-network-packets
         note: >-
-          С картинками: как пакет идёт от пода к поду на одной ноде, между нодами и через Service.
+          Сравни только схемы пути на одной ноде и между нодами. Объясни, где появляется туннель.
         lang: en
-        min: 25
+        min: 12
       - title: Introduction to Cilium & Hubble
         url: https://docs.cilium.io/en/stable/overview/intro/
         note: >-
@@ -1919,10 +1919,9 @@ topics:
       - title: What happens when… — alex/what-happens-when
         url: https://github.com/alex/what-happens-when
         note: >-
-          Классический вопрос собеса по шагам: клавиатура, DNS, ARP, TCP, TLS, HTTP. Хватит разделов про
-          сеть — от DNS до HTTP.
+          Возьми участки DNS, TCP и HTTP. Проследи цепочку от имени сайта до первого запроса.
         lang: en
-        min: 20
+        min: 12
     questions:
       - q: Что происходит, когда вводишь адрес в браузере?
         a: >-
@@ -1990,8 +1989,11 @@ topics:
       ходит в GCP без ключа: короткий токен GitHub меняется на временные креды через Workload Identity
       Federation. В GCP сеть VPC глобальная, файрвол — на уровне сети по тегам машин, а входящее
       запрещено по умолчанию.
-    steps: []
-    step_focus: {}
+    steps: [2-7]
+    step_focus:
+      2-7: >-
+        Найди в «Что сделали» проверку Terraform-плана при замене мастеров и смене типа
+        воркеров. Сравни замену VM с обновлением на месте.
     read:
       - title: What is Terraform
         url: https://developer.hashicorp.com/terraform/intro

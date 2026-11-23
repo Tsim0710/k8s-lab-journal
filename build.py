@@ -448,7 +448,8 @@ def lab_ref(rv: dict, item: str) -> str:
 def src_row(key: str, items: list[str]) -> str:
     if not items:
         return ""
-    return f'<div class="src"><span class="src-k">{key}</span><span>{" · ".join(items)}</span></div>'
+    rows = "".join(f"<li>{item}</li>" for item in items)
+    return f'<div class="src"><span class="src-k">{key}</span><ul>{rows}</ul></div>'
 
 
 def tm(x: dict) -> str:
@@ -579,9 +580,10 @@ def build_review(rv: dict, rm: dict, books: list[dict]) -> str:
   <div class="bar" aria-hidden="true"><i style="width:{pct}%"></i></div>
 </header>
 <section class="today" aria-labelledby="rt-h">
-  <div class="label" id="rt-h">Сегодня</div>{cur_html}
-  <p class="note">Галочки сохраняются в этом браузере. Пройденные темы и повторы фиксируются после твоего отчёта.</p>
+  <div class="label" id="rt-h">Сегодня</div>
   <div class="due-box" hidden><div class="label"><a href="#m-repeat">Повторить по сроку</a></div><ul id="due"></ul></div>{fresh_html}
+  {cur_html}
+  <p class="note">Галочки сохраняются в этом браузере. Пройденные темы и повторы фиксируются после твоего отчёта.</p>
   <div class="note"><a href="#m-daily">{esc(daily["title"])}</a>, {esc(daily["time"])}: {inline(daily["steps"][0]["how"])}</div>
 </section>
 <section class="block" aria-labelledby="rs-h">
