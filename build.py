@@ -146,6 +146,10 @@ def validate_review(rv: dict, rm: dict, books: list[dict]) -> list[str]:
             if str(sid) not in steps:
                 errors.append(f"{where}: в roadmap.yaml нет шага {sid}")
             mapped.add(str(sid))
+        focus = t.get("step_focus") or {}
+        if (not isinstance(focus, dict) or set(focus) != set(t.get("steps") or [])
+                or any(not isinstance(note, str) or not note.strip() for note in focus.values())):
+            errors.append(f"{where}: у каждого связанного шага нужна подсказка в step_focus")
         for p in t.get("seen") or []:
             if p not in pages:
                 errors.append(f"{where}: нет страницы {p}.md")
@@ -158,8 +162,9 @@ def validate_review(rv: dict, rm: dict, books: list[dict]) -> list[str]:
         # Тему можно начинать, только когда она наполнена: todo может быть заготовкой
         if t.get("status") in ("now", "done") and (not t.get("brief") or len(t.get("questions") or []) < 3):
             errors.append(f"{where}: перед проходом нужны brief и хотя бы 3 вопроса")
-        if t.get("brief") and not (isinstance(t.get("practice"), str) and t["practice"].strip()):
-            errors.append(f"{where}: наполненной теме нужно упражнение practice")
+        for key in ("practice", "practice_check"):
+            if t.get("brief") and not (isinstance(t.get(key), str) and t[key].strip()):
+                errors.append(f"{where}: наполненной теме нужно поле {key}")
     for sid, s in steps.items():
         if s["status"] == "done" and sid not in mapped:
             errors.append(f"review.yaml: шаг {sid} закрыт, но не входит ни в одну тему")
@@ -172,8 +177,9 @@ def validate_review(rv: dict, rm: dict, books: list[dict]) -> list[str]:
         errors += [f"review.yaml, режим {sg.get('key', '?')}: нет поля {k}" for k in STAGE_KEYS if k not in sg]
         if not sg.get("steps") or any(not (s.get("name") and s.get("how")) for s in sg["steps"]):
             errors.append(f"review.yaml, режим {sg.get('key', '?')}: у каждого подшага нужны name и how")
-    if not {"pass", "daily"} <= {sg.get("key") for sg in rv["stages"]}:
-        errors.append("review.yaml: нужны режимы pass и daily — из них собирается «Сегодня»")
+    stage_ids = [sg.get("key") for sg in rv["stages"]]
+    if len(stage_ids) != len(set(stage_ids)) or not {"pass", "fresh", "repeat", "daily", "interview"} <= set(stage_ids):
+        errors.append("review.yaml: нужны пять режимов с уникальными ключами: pass, fresh, repeat, daily, interview")
     return errors
 
 
@@ -410,7 +416,7 @@ REVIEW_JS = """
   if (n) document.querySelector(".due-box").hidden = false;
   // ссылка на тему (#t-N) раскрывает её
   function openHash() {
-    var t = location.hash && document.querySelector(location.hash);
+    var t = document.getElementById(location.hash.slice(1));
     if (t && t.tagName === "DETAILS") t.open = true;
   }
   window.addEventListener("hashchange", openHash); openHash();
@@ -449,15 +455,18 @@ def tm(x: dict) -> str:
     return f' <span class="tm">{esc(x["time"])}</span>' if x.get("time") else ""
 
 
-def step_item(sid: str, steps: dict, rv: dict) -> str:
+def step_item(sid: str, steps: dict, rv: dict, focus: str, topic_id: int | None = None) -> str:
     s = steps[sid]
+    note = f'<div class="note">{inline(focus)}</div>'
     if s["status"] != "done":
         return (f'<li class="ahead"><span class="mono">{esc(sid)}</span> {esc(s["title"])} '
-                f'<span class="muted">— впереди в лабе</span></li>')
+                f'<span class="muted">— впереди в лабе</span>{note}</li>')
     links = [f'<a href="journal/{esc(s["journal"])}.html">журнал</a>'] if s.get("journal") else []
     links.append(f'<a href="{esc(rv["private_url"])}steps/{esc(sid)}.md">итог шага</a>{LOCK}')
+    if topic_id is not None:
+        links.append(f'<a href="#t-{esc(topic_id)}">тема {esc(topic_id)}</a>')
     return (f'<li><span class="mono">{esc(sid)}</span> {esc(s["title"])} '
-            f'<span class="links">{" · ".join(links)}</span></li>')
+            f'<span class="links">{" · ".join(links)}</span>{note}</li>')
 
 
 def topic_block(t: dict, rv: dict, steps: dict, titles: dict) -> str:
@@ -479,7 +488,9 @@ def topic_block(t: dict, rv: dict, steps: dict, titles: dict) -> str:
     if t.get("weak"):
         parts.append(f'<div class="weak"><span class="src-k">Провисло</span><span>{inline("; ".join(t["weak"]))}</span></div>')
     if t.get("practice"):
-        parts.append(f'<div class="tsec"><h3>Упражнение</h3><p>{inline(t["practice"])}</p></div>')
+        parts.append(f'<div class="tsec"><h3>Упражнение</h3><p>{inline(t["practice"])}</p>'
+                     f'<div class="qa"><details><summary>Сверить свой ответ</summary>'
+                     f'<div class="ans">{inline(t["practice_check"])}</div></details></div></div>')
     if t.get("questions"):
         qa = "".join(f'<details><summary>{inline(q["q"])}</summary><div class="ans">{inline(q["a"])}</div></details>'
                      for q in t["questions"])
@@ -491,13 +502,13 @@ def topic_block(t: dict, rv: dict, steps: dict, titles: dict) -> str:
             f'<div class="note">{inline(a["note"])}</div></li>' for a in t["read"])
         parts.append(f'<div class="tsec"><h3>Основа</h3><ul class="reads">{reads}</ul></div>')
     if t.get("steps"):
-        items = "".join(step_item(str(sid), steps, rv) for sid in t["steps"])
+        items = "".join(step_item(str(sid), steps, rv, t["step_focus"][sid]) for sid in t["steps"])
         parts.append(f'<div class="tsec"><h3>Шаги лаба</h3><ul class="lsteps">{items}</ul></div>')
     seen = t.get("seen") or []
     srcs = (src_row("Ситуации", [f'<a href="{esc(p)}.html">{esc(titles[p])}</a>' for p in seen if p.startswith("situations/")])
             + src_row("Runbook'и", [f'<a href="{esc(p)}.html">{esc(titles[p])}</a>' for p in seen if p.startswith("runbooks/")])
             + src_row("Конспекты", [lab_ref(rv, x) for x in t.get("lab") or []])
-            + src_row("Теория", [inline(x) for x in t.get("gdoc") or []])
+            + src_row("Google-конспекты", [inline(x) for x in t.get("gdoc") or []])
             + src_row("Тренажёр", [inline(x) for x in t.get("drill") or []]))
     if srcs:
         parts.append(f'<div class="tsec srcs">{srcs}</div>')
@@ -543,9 +554,10 @@ def build_review(rv: dict, rm: dict, books: list[dict]) -> str:
         cur_html = '<div class="focus">Первый проход закончен — дальше только повторы</div>'
     fresh_html = ""
     if fresh:
-        items = "".join(f'<li><span class="mono">{esc(s["id"])}</span> {esc(s["title"])} — '
-                        f'<a href="#t-{esc(topic_of[str(s["id"])]["id"])}">тема {esc(topic_of[str(s["id"])]["id"])}</a></li>'
-                        for s in fresh)
+        items = "".join(
+            step_item(str(s["id"]), steps, rv, topic_of[str(s["id"])]["step_focus"][s["id"]],
+                      topic_of[str(s["id"])]["id"])
+            for s in fresh)
         fresh_html = (f'<div class="fresh-box"><div class="label"><a href="#m-fresh">Свежие шаги лаба</a> — '
                       f'закрепить на опросе</div><ul>{items}</ul></div>')
     daily = stages["daily"]
@@ -555,10 +567,9 @@ def build_review(rv: dict, rm: dict, books: list[dict]) -> str:
 <header class="top">
   <div class="head-row"><h1>План повторения</h1>
     <div class="label">шаги лаба · статьи · конспекты · devops-anki</div></div>
-  <p class="lead">Лаб — это руки, здесь — закрепление. В каждой теме: что это простыми словами, вопросы для
-  самопроверки, базовая статья, свои шаги лаба и теория. Первый проход — по теме за сессию, дальше повторы
-  приходят сами: через неделю, через три, через шесть. Свежий шаг лаба закрепляется опросом в начале
-  следующей лаб-сессии.</p>
+  <p class="lead">На первый проход бери одну тему. Ответь по памяти, сверься с источником и разберись
+  с одним результатом из лаба. В «Сегодня» появятся темы по сроку и шаги для опроса.
+  Ссылки на оба Google-конспекта есть в <a href="{esc(rv['private_url'])}interview/review-plan.md">приватном плане</a>{LOCK}.</p>
   <div class="stats">
     <div><span class="muted">тем пройдено</span> <b>{done} из {len(topics)}</b></div>
     <div><span class="muted">повторов</span> <b>{reps}</b></div>
@@ -569,6 +580,7 @@ def build_review(rv: dict, rm: dict, books: list[dict]) -> str:
 </header>
 <section class="today" aria-labelledby="rt-h">
   <div class="label" id="rt-h">Сегодня</div>{cur_html}
+  <p class="note">Галочки сохраняются в этом браузере. Пройденные темы и повторы фиксируются после твоего отчёта.</p>
   <div class="due-box" hidden><div class="label"><a href="#m-repeat">Повторить по сроку</a></div><ul id="due"></ul></div>{fresh_html}
   <div class="note"><a href="#m-daily">{esc(daily["title"])}</a>, {esc(daily["time"])}: {inline(daily["steps"][0]["how"])}</div>
 </section>
