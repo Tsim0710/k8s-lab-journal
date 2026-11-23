@@ -238,11 +238,14 @@ topics:
           переживал — горел `WorkersOvercommit`. HA к тому времени был собран и отрепетирован, и ядра
           двух мастеров ушли под третий воркер. Убирали по одному через `kubeadm reset`, чтобы кворум
           etcd был на каждом шаге.
-    lab: ['01-cluster — до раздела «etcd»', '14-ha-control-plane — целиком']
+    lab: ['01-cluster — до раздела «etcd»', '14-ha-control-plane — целиком', '11-objects-and-service-network — «Deployment → ReplicaSet → Pod»']
     gdoc:
       - >-
         Kubernetes (k8s-cheatsheet), M1 «Архитектура кластера» · «Что важно знать»: static Pods,
         роли компонентов и кворум.
+      - >-
+        Kubernetes (k8s-cheatsheet), M3 «Декларативная модель и API» · «Что важно знать»:
+        проследи, как после записи желаемого числа реплик контроллер меняет фактическое состояние.
       - >-
         Kubernetes (k8s-cheatsheet), «Памятка-оси» · § 1 «Кто актор?»: разложи путь запроса по
         компонентам.
@@ -1437,6 +1440,9 @@ topics:
         Kubernetes (k8s-cheatsheet), M19 «Диагностика — системный подход» · «Ситуации»:
         локализуй слой по симптому.
       - >-
+        Kubernetes (k8s-cheatsheet), M2 «Контейнер под капотом и что делает kubelet» ·
+        «Что важно знать»: проследи, кто тянет образ и кто запускает процесс в цепочке kubelet → CRI → containerd → runc.
+      - >-
         Kubernetes (k8s-cheatsheet), «Памятка-оси» · § 7–8: слой симптома и ступень диагностики.
       - >-
         Сети для DevOps, M18 «Диагностика, наблюдаемость, производительность» · § 1 «Лестница
@@ -1620,11 +1626,14 @@ topics:
           NetworkPolicy для namespace с базами: это полчаса работы, а без неё любой под ходит к базе.
           Потом Pod Security `baseline` — без него любой под может стать root на ноде. Потом Sealed Secrets,
           чтобы секреты можно было восстановить из git. Порядок — по соотношению риска к стоимости.
-    lab: ['13-security — «Что уже сделано хорошо», «Слабые места», «RBAC: свои пользователи вместо admin.conf»', '12-operations — «RBAC»', 'interview/rbac — целиком']
+    lab: ['13-security — «Что уже сделано хорошо», «Слабые места», «RBAC: свои пользователи вместо admin.conf»', '12-operations — «RBAC»', 'interview/rbac — целиком', '04-workloads — «requests и limits»']
     gdoc:
       - >-
         Kubernetes (k8s-cheatsheet), M16 «RBAC и identity» · «Ситуации»: откуда берутся
         пользователь и группы, как проверить доступ ServiceAccount.
+      - >-
+        Kubernetes (k8s-cheatsheet), M17 «Namespaces, квоты, мультитенантность» · «Что важно знать»:
+        сравни суммарную ResourceQuota и правила LimitRange для отдельных объектов. Квоты в лабе пока теория.
       - >-
         Kubernetes (k8s-cheatsheet), M18 «Периметр пода: политики и supply chain» · «Ситуации»:
         что ограничивает Pod Security и что ограничивает NetworkPolicy.
@@ -1705,8 +1714,11 @@ topics:
           Живы ли поды CoreDNS и есть ли у сервиса `kube-dns` эндпоинты, что в логах CoreDNS. Закрыт egress
           NetworkPolicy — пропущен ли порт 53. Короткое имя из чужого namespace не резолвится — нужно
           `сервис.namespace`.
-    lab: ['11-objects-and-service-network — «Service: какие бывают», «ClusterIP — адрес, которого нет», «DNS внутри кластера»']
+    lab: ['11-objects-and-service-network — «Метки и селекторы — клей всего», «Service: какие бывают», «ClusterIP — адрес, которого нет», «DNS внутри кластера»']
     gdoc:
+      - >-
+        Kubernetes (k8s-cheatsheet), M6 «Labels, selectors, аннотации» · «Что важно знать»:
+        сопоставь selector Service с метками Pod и проверь, как несовпадение отражается на EndpointSlice.
       - >-
         Kubernetes (k8s-cheatsheet), M10 «Service и kube-proxy» · «Что важно знать»: selector,
         EndpointSlice и виртуальный адрес.
@@ -1716,7 +1728,7 @@ topics:
       - >-
         Сети для DevOps, M7 «DNS» · раздел о порядке резолва и кэшировании.
     seen: [situations/dns-slow]
-    drill: ['k8s: services, cluster-dns', 'сети: dns']
+    drill: ['k8s: labels-selectors, services, cluster-dns', 'сети: dns']
 
   - id: 18
     practice: >-
@@ -2146,7 +2158,7 @@ topics:
           Он следит за подами кластера базы. Пропал primary — выбирает самую свежую реплику, продвигает её в
           primary и переключает на неё Service для записи. Клиенты ходят через Service, поэтому адрес для них
           не меняется. Руками это будет в блоке 4, на CloudNativePG.
-    lab: []
+    lab: ['02-platform — «cert-manager — сертификаты»', '01-cluster — «Cilium и сеть»', '07-microservices-otel-demo — «Синхронное и асинхронное» (контекст для теории mesh)']
     gdoc:
       - >-
         Kubernetes (k8s-cheatsheet), M23 «CRD и операторы» · «Ситуации»: CRD, reconcile и статус

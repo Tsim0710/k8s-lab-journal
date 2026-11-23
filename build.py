@@ -570,7 +570,8 @@ def build_review(rv: dict, rm: dict, books: list[dict]) -> str:
     <div class="label">шаги лаба · статьи · конспекты · devops-anki</div></div>
   <p class="lead">На первый проход бери одну тему. Ответь по памяти, сверься с источником и разберись
   с одним результатом из лаба. В «Сегодня» появятся темы по сроку и шаги для опроса.
-  Ссылки на оба Google-конспекта есть в <a href="{esc(rv['private_url'])}interview/review-plan.md">приватном плане</a>{LOCK}.</p>
+  M1–M25 — номера вкладок Google-конспекта Kubernetes. Прямые ссылки и привязки к материалам лаба
+  собраны в <a href="{esc(rv['private_url'])}interview/review-plan.md#указатель-модулей-kubernetes">приватном указателе</a>{LOCK}.</p>
   <div class="stats">
     <div><span class="muted">тем пройдено</span> <b>{done} из {len(topics)}</b></div>
     <div><span class="muted">повторов</span> <b>{reps}</b></div>
