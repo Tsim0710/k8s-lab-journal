@@ -474,7 +474,7 @@ def topic_block(t: dict, rv: dict, steps: dict, titles: dict) -> str:
             if nxt else '<span class="h"></span>')
     mark = {"done": "✓", "now": "▸", "todo": ""}[st]
 
-    parts = [f'<p class="brief">{inline(t["brief"])}</p>' if t.get("brief")
+    parts = [f'<div class="tsec"><h3>Простыми словами</h3><p class="brief">{inline(t["brief"])}</p></div>' if t.get("brief")
              else '<p class="brief muted">Тема ещё не наполнена.</p>']
     if t.get("weak"):
         parts.append(f'<div class="weak"><span class="src-k">Провисло</span><span>{inline("; ".join(t["weak"]))}</span></div>')
