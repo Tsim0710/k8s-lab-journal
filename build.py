@@ -486,6 +486,9 @@ def topic_block(t: dict, rv: dict, steps: dict, titles: dict) -> str:
 
     parts = [f'<div class="tsec"><h3>Простыми словами</h3><p class="brief">{inline(t["brief"])}</p></div>' if t.get("brief")
              else '<p class="brief muted">Тема ещё не наполнена.</p>']
+    if t.get("first_pass"):
+        items = "".join(f"<li>{inline(item)}</li>" for item in t["first_pass"])
+        parts.append(f'<div class="tsec"><h3>Порядок первого прохода</h3><ol>{items}</ol></div>')
     if t.get("weak"):
         parts.append(f'<div class="weak"><span class="src-k">Провисло</span><span>{inline("; ".join(t["weak"]))}</span></div>')
     if t.get("practice"):
@@ -510,7 +513,8 @@ def topic_block(t: dict, rv: dict, steps: dict, titles: dict) -> str:
             + src_row("Runbook'и", [f'<a href="{esc(p)}.html">{esc(titles[p])}</a>' for p in seen if p.startswith("runbooks/")])
             + src_row("Конспекты", [lab_ref(rv, x) for x in t.get("lab") or []])
             + src_row("Google-конспекты", [inline(x) for x in t.get("gdoc") or []])
-            + src_row("Тренажёр", [inline(x) for x in t.get("drill") or []]))
+            + src_row("Тренажёр", [f'<a href="{esc(rv["drill_url"])}">Открыть тренажёр</a>']
+                      + [inline(x) for x in t["drill"]] if t.get("drill") else []))
     if srcs:
         parts.append(f'<div class="tsec srcs">{srcs}</div>')
     return (f'<details class="topic {st}" id="t-{esc(t["id"])}" data-title="{esc(t["title"])}"{" open" if st == "now" else ""}>'
